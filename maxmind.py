@@ -4,15 +4,13 @@ import asyncio
 import geoip2.database
 import requests
 from aiogram import Bot, Dispatcher, html
-from aiogram.client.default import DefaultBotProperties
-from aiogram.enums import ParseMode
 from aiogram.filters import CommandStart
 from aiogram.types import Message
 
 TOKEN = ""
 
 # инициализация бота и диспетчера
-bot = Bot(token=TOKEN, default=DefaultBotProperties(parse_mode=ParseMode.HTML))
+bot = Bot(token=TOKEN)
 dp = Dispatcher()
 
 # функция для скачивания базы данных GeoLite2, если она отсутствует
@@ -55,10 +53,7 @@ async def handle_text(message: Message) -> None:
     download_geoip_database()
     # получаем информацию по IP-адресам из текста
     result = get_ip_info(message.text)
-    # печатаем введённое сообщение в консоль (для отладки)
-    # print(f"Получено сообщение: {message.text}")
     # отправляем результат обратно в чат
-    # print(f"Результат: {result}")
     try:
         await message.answer(result)
     except:
