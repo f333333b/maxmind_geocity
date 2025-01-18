@@ -11,7 +11,7 @@ from datetime import datetime, timedelta
 import logging
 
 # основной код
-TOKEN = "7262958270:AAFsOrDleWZjo-u1nYybqwxy_NO82iPsMrI"
+TOKEN = ""
 LICENSE_KEY = ''
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
