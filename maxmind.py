@@ -2,6 +2,7 @@ import os
 import re
 import asyncio
 import geoip2.database
+import geoip2.errors
 import aiohttp
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
@@ -20,7 +21,7 @@ bot = Bot(token=TOKEN)
 dp = Dispatcher()
 database_filename = 'GeoLite2-City.mmdb'
 # url = f'https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${LICENSE_KEY}&suffix=tar.gz'
-url = r'https://storage.yandexcloud.net/maxmind-geolite2-city/GeoLite2-City.mmdb'
+url = r'https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb'
 re_format = r'\d+\.\d+\.\d+'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -130,7 +131,7 @@ async def create_sql_database():
 
 # функция вывода городов с IP-адресами определенной страны
 async def get_cities(country):
-    pass
+    return 'Эта функция еще в разработке'
 
 # функция фильтрации списков IP-адресов
 async def to_filter_ips(first_input, second_input):
@@ -155,10 +156,13 @@ async def get_ip_info(ip_input: str):
                     results.append(f"{flag} {country_id} ({country}) {city} <code>{ip}</code>")
                     results_to_copy.append(ip)
                 except (geoip2.errors.AddressNotFoundError, ValueError) as e:
+                    results.append(f"Вы ввели неверный IP-адрес.")
                     logging.error(f"Ошибка при обработке IP {ip}: {e}")
+                except Exception as e:
                     results.append(f"Ошибка при обработке IP {ip}: {e}")
+                    logging.error(f"Ошибка при обработке IP {ip}: {e}")
     else:
-        results.append('Неверный формат IP-адреса либо во введенном тексте IP-адреса не найдены. Попробуйте снова.')
+        results.append('Неверный формат IP-адреса либо во введенном тексте IP-адреса не найдены.')
     return "\n".join(results), "\n".join(results_to_copy)
 
 # обработка команды /start
@@ -203,6 +207,8 @@ async def handle_callback(query: CallbackQuery):
     elif query.data == "back_to_choice":
         await query.message.answer(text='Выберете нужное действие:', reply_markup=keyboard_choice
         )
+    elif query.data == 'updating_database':
+        await query.message.answer(text='База данных обновляется, пожалуйста, подождите.')
 
 # обработка сообщений
 @dp.message()
@@ -220,14 +226,23 @@ async def handle_text(message: Message):
             await message.answer(result, parse_mode="HTML", reply_markup=keyboard_copy)
             user_data[user_id] = result_to_copy
         except Exception as e:
-            await message.answer(f"При выполнении программы возникла ошибка. Попробуйте ещё раз.")
-            logging.error(f'Ошибка при определении страны для IP-адреса {message.text}: {e}')
+            await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_copy)
+            user_states[user_id] = 'awaiting_check_country'
+            logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
 
     # сценарий № 2: фильтрация списков IP-адресов (основной список)
     elif user_state == 'awaiting_filter_first_input':
-        user_ips[user_id] = {'first': message.text}
-        user_states[user_id] = 'awaiting_filter_second_input'
-        await message.answer("Теперь введите второй список IP-адресов.", reply_markup=keyboard_back)
+        if re.findall(re_format, message.text):
+            try:
+                user_ips[user_id] = {'first': message.text}
+                await message.answer("Теперь введите второй список IP-адресов.", reply_markup=keyboard_back)
+                user_states[user_id] = 'awaiting_filter_second_input'
+            except Exception as e:
+                await message.answer(f"При выполнении программы возникла ошибка: {e}.")
+                logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
+        else:
+            await message.answer("Введенный текст не содержит IP-адреса.", reply_markup=keyboard_back)
+            user_states[user_id] = 'awaiting_filter_first_input'
 
     # сценарий № 3: фильтрация списков IP-адресов (второй список)
     elif user_state == 'awaiting_filter_second_input':
@@ -242,10 +257,10 @@ async def handle_text(message: Message):
                     await message.answer(f"{result_filtered_ips}", reply_markup=keyboard_back)
                     user_states[user_id] = None  # сброс состояния после фильтрации
                 else:
-                    await message.answer(f"Отфильтрованный список пуст!", reply_markup=keyboard_back)
+                    await message.answer(f"Отфильтрованный список пуст. IP-адресов нет.", reply_markup=keyboard_back)
                     user_states[user_id] = 'awaiting_filter_first_input'
             except Exception as e:
-                await message.answer("Ошибка при фильтрации IP-адресов. Попробуйте снова.", reply_markup=keyboard_back)
+                await message.answer(f"Ошибка при фильтрации IP-адресов: {e} Попробуйте снова.", reply_markup=keyboard_back)
                 user_states[user_id] = 'awaiting_filter_first_input'
                 logging.error(f'Ошибка фильтрации для пользователя {user_id}: {e}')
                 user_states[user_id] = None  # сброс состояния при ошибке
@@ -257,12 +272,15 @@ async def handle_text(message: Message):
     elif user_state == 'get_cities':
         try:
             result = await get_cities(message.text)
-            await message.answer(result, parse_mode="HTML", reply_markup=keyboard_copy)
+            await message.answer(result, parse_mode="HTML", reply_markup=keyboard_back)
             user_data[user_id] = 'get_cities'
         except Exception as e:
-            await message.answer(f"Эта функция ещё в разработке", reply_markup=keyboard_back)
+            await message.answer(f"При выполнении программы произошла ошибка {e}", reply_markup=keyboard_back)
             user_data[user_id] = 'back_to_choice'
             logging.error(f'Ошибка при определении списка городов по стране: {e}')
+    elif user_state == 'updating_database':
+        await message.answer(f"База данных обновляется, пожалуйста, подождите.")
+        user_data[user_id] = 'updating_database'
     else:
         await message.answer("Выберите нужное действие:", reply_markup=keyboard_choice, parse_mode="HTML")
 
