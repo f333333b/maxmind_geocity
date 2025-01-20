@@ -10,16 +10,15 @@ from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, C
 import countryflag
 from datetime import datetime, timedelta
 import logging
-import maxminddb
-import psycopg2
-import csv
 
 # основной код
-TOKEN = ""
+TOKEN = r""
 LICENSE_KEY = ''
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 database_filename = 'GeoLite2-City.mmdb'
+#city_database_filename = 'GeoLite2-City.mmdb'
+proxy_database_filename = ''
 # url = f'https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${LICENSE_KEY}&suffix=tar.gz'
 url = r'https://github.com/P3TERX/GeoLite.mmdb/raw/download/GeoLite2-City.mmdb'
 re_format = r'\d+\.\d+\.\d+'
@@ -70,17 +69,17 @@ keyboard_back = InlineKeyboardMarkup(
 
 # функция для обновления базы
 async def download_database(user_id):
-    async with db_update_lock:
-        await bot.send_message(chat_id=user_id, text="База данных обновляется, пожалуйста, подождите...")
-        async with aiohttp.ClientSession() as session:
-            async with session.get(url) as response:
-                if response.status == 200:
-                    with open(database_filename, 'wb') as file:
-                        file.write(await response.read())
-                else:
-                    logging.error(f"Ошибка при скачивании базы данных: {response.status}")
-        await create_sql_database()
-        await bot.send_message(chat_id=user_id, text="Обновление базы данных завершено.")
+    await bot.send_message(chat_id=user_id, text="База данных обновляется, пожалуйста, подождите...")
+    user_states[user_id] = 'awaiting_database_update'
+    async with aiohttp.ClientSession() as session:
+        async with session.get(url) as response:
+            if response.status == 200:
+                with open(database_filename, 'wb') as file:
+                    file.write(await response.read())
+            else:
+                logging.error(f"Ошибка при скачивании базы данных: {response.status}")
+    await bot.send_message(chat_id=user_id, text="Обновление базы данных завершено.", reply_markup=keyboard_choice)
+    user_states[user_id] = 'back_to_choice'
 
 # функция проверки наличия базы и ее актуальности
 async def is_update_needed(user_id):
@@ -91,54 +90,23 @@ async def is_update_needed(user_id):
         if datetime.now() - db_creation_date > timedelta(weeks=1):
             await download_database(user_id)
 
-# функция для создания SQL базы данных
-async def create_sql_database():
-    db_params = {
-        'dbname': 'postgres',
-        'user': 'postgres',
-        'password': '1',
-        'host': 'localhost',
-        'port': '5432'
-    }
-    conn = psycopg2.connect(**db_params)
-    cur = conn.cursor()
-
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS ip_data (
-    id SERIAL PRIMARY KEY,
-    ip_address TEXT,
-    country TEXT,
-	iso_code TEXT,
-    city TEXT
-    );
-    """)
-    with open('ip_data.csv', 'w', newline='', encoding='utf-8') as csv_database_file:
-        writer = csv.writer(csv_database_file)
-        writer.writerow(['ip_address', 'country', 'iso_code', 'city'])
-        with maxminddb.open_database('GeoLite2-City.mmdb') as reader:
-            for network, record in reader:
-                ip_address = str(network)
-                country = record.get('country', {}).get('names', {}).get('en', 'Unknown')
-                iso_code = record.get('country', {}).get('iso_code', 'Unknown')
-                city = record.get('city', {}).get('names', {}).get('en', 'Unknown')
-                writer.writerow([ip_address, country, iso_code, city])
-
-    with open('ip_data.csv', 'r', encoding='utf-8') as csv_database_file:
-        cur.copy_expert("COPY ip_data3 (ip_address, country, iso_code, city) FROM STDIN WITH CSV HEADER", csv_database_file)
-    conn.commit()
-    cur.close()
-    conn.close()
-
 # функция вывода городов с IP-адресами определенной страны
-async def get_cities(country):
-    return 'Эта функция еще в разработке'
+async def get_cities(text):
+    country = text[:2]
+    result, result_to_copy = get_ip_info(text)
+    country = record.get('country', {}).get('names', {}).get('en', None)
+    if country == name:
+       city = record.get('city', {}).get('names', {}).get('ru', None)
+       if city:
+          cities.add(city)
+    # return 'Эта функция еще в разработке'
 
 # функция фильтрации списков IP-адресов
 async def to_filter_ips(first_input, second_input):
     return set(re.findall(re_format, first_input)).difference(set(re.findall(re_format, second_input)))
 
 # функция для обработки текста и получения IP-адресов
-async def get_ip_info(ip_input: str):
+async def get_ip_info(ip_input: str, country_input: str=''):
     ip_list_input = re.findall(re_format, ip_input)
     ip_list = list(map(lambda x: x + '.0', ip_list_input))
     results, results_to_copy = [], []
@@ -149,12 +117,18 @@ async def get_ip_info(ip_input: str):
                 ip = ip_list_input[i]
                 try:
                     response = city_file.city(ip_list[i])
+                    print(response)
                     country_id = response.country.iso_code
                     country = response.country.names.get('ru', '')
                     city = response.city.names.get('ru', '')
                     flag = countryflag.getflag([country_id])
-                    results.append(f"{flag} {country_id} ({country}) {city} <code>{ip}</code>")
-                    results_to_copy.append(ip)
+                    if country_input:
+                        if country_id == country_input:
+                            pass
+                    else:
+                        results.append(f"{flag} {country_id} ({country}) {city} <code>{ip}</code>")
+                        results_to_copy.append(ip)
+
                 except (geoip2.errors.AddressNotFoundError, ValueError) as e:
                     results.append(f"Вы ввели неверный IP-адрес.")
                     logging.error(f"Ошибка при обработке IP {ip}: {e}")
@@ -207,8 +181,6 @@ async def handle_callback(query: CallbackQuery):
     elif query.data == "back_to_choice":
         await query.message.answer(text='Выберете нужное действие:', reply_markup=keyboard_choice
         )
-    elif query.data == 'updating_database':
-        await query.message.answer(text='База данных обновляется, пожалуйста, подождите.')
 
 # обработка сообщений
 @dp.message()
@@ -278,9 +250,8 @@ async def handle_text(message: Message):
             await message.answer(f"При выполнении программы произошла ошибка {e}", reply_markup=keyboard_back)
             user_data[user_id] = 'back_to_choice'
             logging.error(f'Ошибка при определении списка городов по стране: {e}')
-    elif user_state == 'updating_database':
+    elif user_state == 'awaiting_database_update':
         await message.answer(f"База данных обновляется, пожалуйста, подождите.")
-        user_data[user_id] = 'updating_database'
     else:
         await message.answer("Выберите нужное действие:", reply_markup=keyboard_choice, parse_mode="HTML")
 
