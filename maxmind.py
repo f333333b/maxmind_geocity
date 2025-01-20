@@ -14,12 +14,13 @@ import psycopg2
 import csv
 
 # основной код
-TOKEN = ""
+TOKEN = "7262958270:AAHQpYH6-kU2CwNIh3rsdWApxA8pgRHsNqk"
 LICENSE_KEY = ''
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 database_filename = 'GeoLite2-City.mmdb'
-url = f'https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${LICENSE_KEY}&suffix=tar.gz'
+# url = f'https://download.maxmind.com/app/geoip_download?edition_id=GeoLite2-City&license_key=${LICENSE_KEY}&suffix=tar.gz'
+url = r'https://storage.yandexcloud.net/maxmind-geolite2-city/GeoLite2-City.mmdb'
 re_format = r'\d+\.\d+\.\d+'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
@@ -38,7 +39,9 @@ user_ips = {}
 keyboard_choice = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="Проверить страну по IP-адресу", callback_data="check_country")],
-        [InlineKeyboardButton(text="Фильтровать IP", callback_data="filter_ips_1")]
+        [InlineKeyboardButton(text="Фильтровать IP", callback_data="filter_ips_1")],
+        [InlineKeyboardButton(text="Вывести города по стране", callback_data="get_cities")]
+
     ]
 )
 
@@ -67,7 +70,7 @@ keyboard_back = InlineKeyboardMarkup(
 # функция для обновления базы
 async def download_database(user_id):
     async with db_update_lock:
-        await bot.send_message(chat_id=user_id, text="База данных обновляется, пожалуйста подождите...")
+        await bot.send_message(chat_id=user_id, text="База данных обновляется, пожалуйста, подождите...")
         async with aiohttp.ClientSession() as session:
             async with session.get(url) as response:
                 if response.status == 200:
@@ -75,7 +78,7 @@ async def download_database(user_id):
                         file.write(await response.read())
                 else:
                     logging.error(f"Ошибка при скачивании базы данных: {response.status}")
-        await create_sql_table()
+        await create_sql_database()
         await bot.send_message(chat_id=user_id, text="Обновление базы данных завершено.")
 
 # функция проверки наличия базы и ее актуальности
@@ -88,7 +91,7 @@ async def is_update_needed(user_id):
             await download_database(user_id)
 
 # функция для создания SQL базы данных
-async def make_sql_database():
+async def create_sql_database():
     db_params = {
         'dbname': 'postgres',
         'user': 'postgres',
@@ -108,7 +111,6 @@ async def make_sql_database():
     city TEXT
     );
     """)
-
     with open('ip_data.csv', 'w', newline='', encoding='utf-8') as csv_database_file:
         writer = csv.writer(csv_database_file)
         writer.writerow(['ip_address', 'country', 'iso_code', 'city'])
@@ -125,6 +127,10 @@ async def make_sql_database():
     conn.commit()
     cur.close()
     conn.close()
+
+# функция вывода городов с IP-адресами определенной страны
+async def get_cities(country):
+    pass
 
 # функция фильтрации списков IP-адресов
 async def to_filter_ips(first_input, second_input):
@@ -191,6 +197,9 @@ async def handle_callback(query: CallbackQuery):
         else:
             await query.message.answer("Нет сохраненных IP-адресов для копирования.")
             user_states[user_id] = 'awaiting_check_country'
+    elif query.data == 'get_cities':
+        await query.message.answer("Введите страну в формате ISO (например 'US', 'FR')", reply_markup=keyboard_back)
+        user_states[user_id] = 'get_cities'
     elif query.data == "back_to_choice":
         await query.message.answer(text='Выберете нужное действие:', reply_markup=keyboard_choice
         )
@@ -202,7 +211,7 @@ async def handle_text(message: Message):
     user_state = user_states.get(user_id)
 
     # проверяем наличие актуальной скачанной базы данных
-    # await is_update_needed(user_id)
+    await is_update_needed(user_id)
 
     # сценарий № 1: определение страны по IP-адресу
     if user_state == 'awaiting_check_country':
@@ -229,18 +238,32 @@ async def handle_text(message: Message):
                 filtered_ips = await to_filter_ips(first_ips, second_ips)
                 result_filtered_ips = '\n'.join(filtered_ips)
                 if filtered_ips:
-                    await message.answer(f"Отфильтрованные IP-адреса:\n{result_filtered_ips}", reply_markup=keyboard_back)
+                    await message.answer(f"Отфильтрованные IP-адреса:")
+                    await message.answer(f"{result_filtered_ips}", reply_markup=keyboard_back)
                     user_states[user_id] = None  # сброс состояния после фильтрации
                 else:
                     await message.answer(f"Отфильтрованный список пуст!", reply_markup=keyboard_back)
+                    user_states[user_id] = 'awaiting_filter_first_input'
             except Exception as e:
                 await message.answer("Ошибка при фильтрации IP-адресов. Попробуйте снова.", reply_markup=keyboard_back)
-                logging.error(f'Ошибка фильтрации для пользователя {user_id}: {e}', reply_markup=keyboard_back)
+                user_states[user_id] = 'awaiting_filter_first_input'
+                logging.error(f'Ошибка фильтрации для пользователя {user_id}: {e}')
                 user_states[user_id] = None  # сброс состояния при ошибке
         else:
             await message.answer("Ошибка: не был получен первый список IP-адресов.")
+            user_states[user_id] = 'awaiting_filter_first_input'
+
+    # сценарий № 4: вывод городов с IP-адресами определенной страны
+    elif user_state == 'get_cities':
+        try:
+            result = await get_cities(message.text)
+            await message.answer(result, parse_mode="HTML", reply_markup=keyboard_copy)
+            user_data[user_id] = 'get_cities'
+        except Exception as e:
+            await message.answer(f"При выполнении программы возникла ошибка. Попробуйте ещё раз.")
+            logging.error(f'Ошибка при определении списка городов по стране: {e}')
     else:
-        await message.answer("Неверное состояние. Начните с выбора действия.", reply_markup=keyboard_choice, parse_mode="HTML")
+        await message.answer("Выберите нужное действие:", reply_markup=keyboard_choice, parse_mode="HTML")
 
     # логирование
     # user_logger = setup_user_logger(message.from_user.id)
