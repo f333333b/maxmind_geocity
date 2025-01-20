@@ -14,7 +14,7 @@ import psycopg2
 import csv
 
 # основной код
-TOKEN = "7262958270:AAHQpYH6-kU2CwNIh3rsdWApxA8pgRHsNqk"
+TOKEN = ""
 LICENSE_KEY = ''
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
@@ -260,7 +260,8 @@ async def handle_text(message: Message):
             await message.answer(result, parse_mode="HTML", reply_markup=keyboard_copy)
             user_data[user_id] = 'get_cities'
         except Exception as e:
-            await message.answer(f"При выполнении программы возникла ошибка. Попробуйте ещё раз.")
+            await message.answer(f"Эта функция ещё в разработке", reply_markup=keyboard_back)
+            user_data[user_id] = 'back_to_choice'
             logging.error(f'Ошибка при определении списка городов по стране: {e}')
     else:
         await message.answer("Выберите нужное действие:", reply_markup=keyboard_choice, parse_mode="HTML")
