@@ -133,42 +133,59 @@ async def to_filter_ips(first_input, second_input):
 # функция для обработки текста и получения IP-адресов
 async def get_ip_info(text_input: str):
     all_ips = re.findall(pattern, text_input)
-    results, results_to_copy = [], []
     target_country = text_input[:2]
     ip_list_text = text_input.splitlines()
-    new_text_dict, copy_dict = {}, {}
+    new_text_dict, result_copy = {}, []
     if text_input[:2].isalpha() and text_input[:2].isupper():
-        new_text_dict[target_country] = []
+        new_text_dict[target_country] = {}
     if all_ips:
-        with geoip2.database.Reader(database_filename) as city_file:
+        with (geoip2.database.Reader(database_filename) as city_file):
             for line in ip_list_text:
                 match = re.search(pattern, line)
                 if match:
                     ip_original = match.group()
                     ip = ip_original + '.0'
-                    try:
-                        response = city_file.city(ip)
-                        country_id = response.country.iso_code
-                        country_ru = response.country.names.get('ru', '')
-                        country_en = response.country.names.get('en', '')
-                        city = response.city.names.get('ru', '')
-                        if not city:
-                            city = capitals[country_en]
-                        flag = countryflag.getflag([country_id])
-                        if not new_text_dict[country_ru]:
-                            new_text_dict[country_id] = [[str(f'{flag}{country_id}{country_ru}')]]
-                            copy_dict[country_id] = []
-                        new_text_dict[country_id].append(line.replace(match.group(), f"{city} <code>{ip_original}</code>"))
-                        copy_dict[country_id].append(line.replace(match.group(), "<code>{ip_original}</code>"))
-                    except Exception as e:
-                        new_text_dict[country_id].append(line.replace(match.group(), f"Ошибка при обработке IP {ip}: {e}"))
-                        copy_dict[country_id].append(line.replace(match.group(), f"Ошибка при обработке IP {ip}: {e}"))
-                        logging.error(f"Ошибка при обработке IP {ip}: {e}")
-    else:
-        return False
-    results = [text for text in new_text_dict.values()]
-    results_to_copy = [text for text in copy_dict.values()]
-    return results, results_to_copy
+                    response = city_file.city(ip)
+                    country_id = response.country.iso_code
+                    country_ru = response.country.names.get('ru', '')
+                    country_en = response.country.names.get('en', '')
+                    city = response.city.names.get('ru', '')
+                    if not city:
+                        city = capitals[country_en]
+                    flag = countryflag.getflag([country_id])
+                    if country_id == target_country:
+                        new_text_dict[country_id] = {'head': f'{flag} {country_id} ({country_ru})'}
+                        result_copy.append(line.replace(match.group(), f"<code>{ip_original}</code>"))
+                    if country_id not in new_text_dict:
+                        new_text_dict[country_id] = {'head': f'{flag} {country_id} ({country_ru})'}
+                    if 'cities' not in new_text_dict[country_id]:
+                        new_text_dict[country_id]['cities'] = {}
+                    if city not in new_text_dict[country_id]['cities']:
+                        new_text_dict[country_id]['cities'][city] = []
+                    new_text_dict[country_id]['cities'][city].append(line.replace(match.group(), f"<code>{ip_original}</code>"))
+
+        result = []
+
+    for k, v in new_text_dict.items():
+        # print(f'k={k}')
+        # result.append(f'<b>{k}</b>')
+        for k1, v1 in v.items():
+            # print(f'k1={k1}')
+            print(f'type(v1)={type(v1)}')
+            if type(v1) == str:
+                # print(f'v1={v1}')
+                result.append(f'<b>{v1}</b>')
+            if type(v1) == dict:
+                for k2, v2 in v1.items():
+                    # print(f'type(k2)={type(k2)}')
+                    # print(f'type(v2)={type(v2)}')
+                    result.append(f'<b>{k2}</b>')
+                    print(f'k2={k2}')
+                    # print(len(v2))
+                    for i in v2:
+                        print(f'v2 (i) = {i}')
+                        result.append(i)
+    return result, result_copy
 
 # обработка команды /start
 @dp.message(CommandStart())
@@ -200,8 +217,8 @@ async def handle_callback(query: CallbackQuery):
         ips_to_copy = user_data.get(user_id, [])
         if ips_to_copy:
             # отправляем список IP-адресов пользователю
-            formatted_ips = "".join(ips_to_copy)
-            await query.message.answer(f"{formatted_ips}", reply_markup=keyboard_back)
+            formatted_ips = "\n".join(ips_to_copy)
+            await query.message.answer(formatted_ips, reply_markup=keyboard_back)
             user_states[user_id] = 'awaiting_check_country'
         else:
             await query.message.answer("Нет сохраненных IP-адресов для копирования.", reply_markup=keyboard_back)
@@ -224,8 +241,8 @@ async def handle_text(message: Message):
     if user_state == 'awaiting_check_country':
         try:
             result, result_to_copy = await get_ip_info(message.text)
-            print(result)
-            print(result_to_copy)
+            #print(result)
+            #print(result_to_copy)
             if result:
                 await message.answer('\n'.join(result), parse_mode="HTML", reply_markup=keyboard_copy)
                 user_data[user_id] = [result_to_copy]
