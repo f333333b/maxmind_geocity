@@ -16,22 +16,19 @@ import tempfile
 import countryinfo
 
 # основной код
-TOKEN = r""
-LICENCE_KEY = 
+TOKEN = os.getenv('BOT_TOKEN')
+LICENSE_KEY = os.getenv('LICENSE_KEY')
 bot = Bot(token=TOKEN)
 dp = Dispatcher()
 database_filename = 'GeoLite2-City.mmdb'
-#city_database_filename = 'GeoLite2-City.mmdb'
-proxy_database_filename = ''
 url = (
     f"https://download.maxmind.com/app/geoip_download?"
-    "edition_id=GeoLite2-City&license_key={LICENCE_KEY}"
+    "edition_id=GeoLite2-City&license_key={LICENSE_KEY}"
     "&suffix=tar.gz"
 )
 pattern = r'\d+\.\d+\.\d+'
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger()
-
 
 # блокировка на время скачивания базы данных
 db_update_lock = asyncio.Lock()
