@@ -13,8 +13,9 @@ import countryinfo
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
 from aiogram.filters import CommandStart
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from datetime import datetime, timedelta
+from capitals import capitals
 
 # основной код
 load_dotenv()
@@ -25,8 +26,8 @@ dp = Dispatcher()
 database_filename = 'GeoLite2-City.mmdb'
 url = (
     f"https://download.maxmind.com/app/geoip_download?"
-    "edition_id=GeoLite2-City&license_key={LICENSE_KEY}"
-    "&suffix=tar.gz"
+    f"edition_id=GeoLite2-City&license_key={LICENSE_KEY}"
+    f"&suffix=tar.gz"
 )
 pattern = r'\d+\.\d+\.\d+'
 logging.basicConfig(level=logging.INFO)
@@ -43,19 +44,25 @@ user_data = {}
 user_ips = {}
 
 # кнопки для выбора действия
+start_keyboard = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="/start")]
+    ],
+    resize_keyboard=True,
+    one_time_keyboard=True
+)
+
 keyboard_choice = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="Проверить страну по IP-адресу", callback_data="check_country")],
-        [InlineKeyboardButton(text="Фильтровать IP", callback_data="filter_ips_1")],
-        [InlineKeyboardButton(text="Вывести города по стране", callback_data="get_cities")]
+        [InlineKeyboardButton(text="Фильтровать IP", callback_data="filter_ips_1")]
 
     ]
 )
 
-keyboard_copy_or_grouped = InlineKeyboardMarkup(
+keyboard_copy = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="Скопировать все IP-адреса", callback_data="copy_ips")],
-        [InlineKeyboardButton(text="Сгруппировать IP-адреса по городам", callback_data="group_ips")],
         [InlineKeyboardButton(text="Назад", callback_data="back_to_choice")]
     ]
 )
@@ -97,27 +104,27 @@ async def download_database(user_id):
                             program_directory = os.path.dirname(os.path.abspath(__file__))
                             destination_path = os.path.join(program_directory, database_filename)
                             shutil.copy2(target_file, destination_path)
-                            await bot.send_message(chat_id=user_id, text="База данных обновлена.", reply_markup=keyboard_choice)
+                            await bot.send_message(chat_id=user_id, text="База данных обновлена.")
                         else:
                             logging.error(f"Файл {database_filename} не найден в архиве.")
                             await bot.send_message(chat_id=user_id, text="При обновлении базы данных произошла ошибка.", reply_markup=keyboard_choice)
             else:
                 logging.error(f"Ошибка при скачивании базы данных: {response.status}")
-    await bot.send_message(chat_id=user_id, text="Обновление базы данных завершено.", reply_markup=keyboard_choice)
     user_states[user_id] = 'back_to_choice'
 
 # функция проверки наличия базы и ее актуальности
 async def is_update_needed(user_id):
     if not os.path.exists(database_filename):
         await download_database(user_id)
-    existing_base_date = datetime.fromtimestamp(os.path.getmtime(database_filename))
-    async with aiohttp.ClientSession() as session:
-        async with session.head(url) as response:
-            if "Last-Modified" in response.headers:
-                updated_base_date = response.headers["Last-Modified"]
-                formatted_updated_base_date = datetime.strptime(updated_base_date, "%a, %d %b %Y %H:%M:%S %Z")
-                if formatted_updated_base_date - existing_base_date > timedelta(weeks=1):
-                    await download_database(user_id)
+    else:
+        existing_base_date = datetime.fromtimestamp(os.path.getmtime(database_filename))
+        async with aiohttp.ClientSession() as session:
+            async with session.head(url) as response:
+                if "Last-Modified" in response.headers:
+                    updated_base_date = response.headers["Last-Modified"]
+                    formatted_updated_base_date = datetime.strptime(updated_base_date, "%a, %d %b %Y %H:%M:%S %Z")
+                    if formatted_updated_base_date - existing_base_date > timedelta(weeks=1):
+                        await download_database(user_id)
 
 # функция фильтрации списков IP-адресов
 async def to_filter_ips(first_input, second_input):
@@ -126,16 +133,17 @@ async def to_filter_ips(first_input, second_input):
 # функция для обработки текста и получения IP-адресов
 async def get_ip_info(text_input: str):
     all_ips = re.findall(pattern, text_input)
-    if text_input[:2].isalpha():
-        country = text_input[:2]
+    results, results_to_copy = [], []
+    target_country = text_input[:2]
     ip_list_text = text_input.splitlines()
-    new_text_list, copy_list, grouped_list = [], [], []
+    new_text_dict, copy_dict = {}, {}
+    if text_input[:2].isalpha() and text_input[:2].isupper():
+        new_text_dict[target_country] = []
     if all_ips:
         with geoip2.database.Reader(database_filename) as city_file:
             for line in ip_list_text:
                 match = re.search(pattern, line)
                 if match:
-                    # print(match)
                     ip_original = match.group()
                     ip = ip_original + '.0'
                     try:
@@ -143,21 +151,24 @@ async def get_ip_info(text_input: str):
                         country_id = response.country.iso_code
                         country_ru = response.country.names.get('ru', '')
                         country_en = response.country.names.get('en', '')
-                        city = response.city.names.get('en', '')
+                        city = response.city.names.get('ru', '')
                         if not city:
-                            city = CountryInfo(country_en).capital()
+                            city = capitals[country_en]
                         flag = countryflag.getflag([country_id])
-                        new_line = line.replace(match.group(), f"{flag} {country_id} ({country_ru}) {city} <code>{ip_original}</code>")
+                        if not new_text_dict[country_ru]:
+                            new_text_dict[country_id] = [[str(f'{flag}{country_id}{country_ru}')]]
+                            copy_dict[country_id] = []
+                        new_text_dict[country_id].append(line.replace(match.group(), f"{city} <code>{ip_original}</code>"))
+                        copy_dict[country_id].append(line.replace(match.group(), "<code>{ip_original}</code>"))
                     except Exception as e:
-                        new_line = line.replace(match.group(), f"Ошибка при обработке IP {ip}: {e}")
+                        new_text_dict[country_id].append(line.replace(match.group(), f"Ошибка при обработке IP {ip}: {e}"))
+                        copy_dict[country_id].append(line.replace(match.group(), f"Ошибка при обработке IP {ip}: {e}"))
                         logging.error(f"Ошибка при обработке IP {ip}: {e}")
-                else:
-                    new_line = line
-                copy_list.append(ip_original + '\n')
-                new_text_list.append(new_line + '\n')
     else:
-        pass
-    return new_text_list, copy_list, grouped_list
+        return False
+    results = [text for text in new_text_dict.values()]
+    results_to_copy = [text for text in copy_dict.values()]
+    return results, results_to_copy
 
 # обработка команды /start
 @dp.message(CommandStart())
@@ -186,7 +197,7 @@ async def handle_callback(query: CallbackQuery):
 
     # сценарий № 4: вывод IP-адресов в столбик для копирования
     elif query.data == 'copy_ips':
-        ips_to_copy = user_data.get(user_id, [])[0]
+        ips_to_copy = user_data.get(user_id, [])
         if ips_to_copy:
             # отправляем список IP-адресов пользователю
             formatted_ips = "".join(ips_to_copy)
@@ -196,16 +207,6 @@ async def handle_callback(query: CallbackQuery):
             await query.message.answer("Нет сохраненных IP-адресов для копирования.", reply_markup=keyboard_back)
             user_states[user_id] = 'awaiting_check_country'
 
-    # сценарий № 5: вывод IP-адресов, сгруппированных по городам
-    elif query.data == 'group_ips':
-        grouped_ips = ips_to_copy = user_data.get(user_id, [])[1]
-        if grouped_ips:
-            formatted_grouped_ips = "".join(ips_to_copy)
-            await query.message.answer(f"{formatted_grouped_ips}", reply_markup=keyboard_choice)
-            user_states[user_id] = 'back_to_choice'
-        else:
-            await query.message.answer("Нет IP-адресов для отображения.", reply_markup=keyboard_choice)
-            user_states[user_id] = 'back_to_choice'
     elif query.data == "back_to_choice":
         await query.message.answer(text='Выберете нужное действие:', reply_markup=keyboard_choice
         )
@@ -222,14 +223,16 @@ async def handle_text(message: Message):
     # сценарий № 1: определение страны по IP-адресу
     if user_state == 'awaiting_check_country':
         try:
-            result, result_to_copy, result_grouped = await get_ip_info(message.text)
+            result, result_to_copy = await get_ip_info(message.text)
             print(result)
             print(result_to_copy)
-            print(result_grouped)
-            await message.answer('\n'.join(result), parse_mode="HTML", reply_markup=keyboard_copy_or_grouped)
-            user_data[user_id] = [result_to_copy, result_grouped]
+            if result:
+                await message.answer('\n'.join(result), parse_mode="HTML", reply_markup=keyboard_copy)
+                user_data[user_id] = [result_to_copy]
+            else:
+                await message.answer('Во введенном текст IP-адреса не найдены.', parse_mode="HTML", reply_markup=keyboard_copy)
         except Exception as e:
-            await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_copy_or_grouped)
+            await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_copy)
             user_states[user_id] = 'awaiting_check_country'
             logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
 
@@ -274,16 +277,6 @@ async def handle_text(message: Message):
                 await message.answer("Ошибка: не был получен первый список IP-адресов.")
                 user_states[user_id] = 'awaiting_filter_first_input'
 
-    # сценарий № 4: вывод городов с IP-адресами определенной страны
-    elif user_state == 'get_cities':
-        try:
-            result = await get_cities(message.text)
-            await message.answer(result, parse_mode="HTML", reply_markup=keyboard_back)
-            user_data[user_id] = 'get_cities'
-        except Exception as e:
-            await message.answer(f"При выполнении программы произошла ошибка {e}", reply_markup=keyboard_back)
-            user_data[user_id] = 'back_to_choice'
-            logging.error(f'Ошибка при определении списка городов по стране: {e}')
     elif user_state == 'awaiting_database_update':
         await message.answer(f"База данных обновляется, пожалуйста, подождите.")
     else:
@@ -309,4 +302,3 @@ async def main():
     await dp.start_polling(bot)
 
 asyncio.run(main())
-
