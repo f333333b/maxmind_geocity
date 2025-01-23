@@ -4,18 +4,20 @@ import asyncio
 import geoip2.database
 import geoip2.errors
 import aiohttp
-from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart
-from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
 import countryflag
-from datetime import datetime, timedelta
 import logging
 import tarfile
 import shutil
 import tempfile
 import countryinfo
+from dotenv import load_dotenv
+from aiogram import Bot, Dispatcher
+from aiogram.filters import CommandStart
+from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery
+from datetime import datetime, timedelta
 
 # основной код
+load_dotenv()
 TOKEN = os.getenv('BOT_TOKEN')
 LICENSE_KEY = os.getenv('LICENSE_KEY')
 bot = Bot(token=TOKEN)
@@ -307,3 +309,4 @@ async def main():
     await dp.start_polling(bot)
 
 asyncio.run(main())
+
