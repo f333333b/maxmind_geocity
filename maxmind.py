@@ -9,13 +9,13 @@ import logging
 import tarfile
 import shutil
 import tempfile
-import countryinfo
 from dotenv import load_dotenv
 from aiogram import Bot, Dispatcher
-from aiogram.filters import CommandStart
+from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton, CallbackQuery, ReplyKeyboardMarkup, KeyboardButton
 from datetime import datetime, timedelta
 from capitals import capitals
+from itertools import chain
 
 # основной код
 load_dotenv()
@@ -43,6 +43,66 @@ user_data = {}
 # переменная для хранения IP-адресов
 user_ips = {}
 
+# справка
+help_text = (
+        "🤖 **Справка**\n\n"
+        "Список доступных команд:\n"
+        "/start - Начать работу с ботом\n"
+        "/help - Получить справку\n\n"
+        "<b>Проверить страну по IP-адресу:</b>\n"
+        "1. Введите текст, содержащий IP-адрес(а). Бот построчно проверяет текст и определяет наличие IP-адресов.\n"
+        "2. Найденные IP-адреса группируются по странам, а внутри стран — по городам.\n"
+        "3. Если в тексте первыми двумя буквами указан ISO-код страны (например, \"US\" для США), IP-адреса этой страны будут выведены первыми в результирующем списке.\n"
+        "4. Каждый IP-адрес кликабелен — при нажатии копируется в буфер обмена.\n\n"
+        "<b>Пример запроса:</b>\n"
+        "\n"
+        "US\n"
+        "Сервер №36 (35 прокси, 5 подсетей):\n"
+        "171.22.76. - 12 прокси\n"
+        "102.129.221. - 7 прокси\n"
+        "181.214.117. - 6 прокси\n"
+        "Сервер №188 (30 прокси, 2 подсетей):\n"
+        "195.96.157. - 18 прокси\n"
+        "88.216.43. - 12 прокси\n"
+        "Сервер №193 (9 прокси, 1 подсетей):\n"
+        "176.100.44. - 9 прокси\n"
+        "\n\n"
+        "<b>Пример ответа:</b>\n"
+        "\n"
+        "🇺🇸 US (США)\n"
+        "Джэксонвилл\n"
+        "171.22.76. - 12 прокси\n"
+        "Вашингтон\n"
+        "102.129.221. - 7 прокси\n"
+        "Сакраменто\n"
+        "176.100.44. - 9 прокси\n\n"
+        "🇦🇪 AE (ОАЭ)\n"
+        "Абу-Даби\n"
+        "181.214.117. - 6 прокси\n\n"
+        "🇸🇨 SC (Сейшельские о-ва)\n"
+        "Виктория\n"
+        "195.96.157. - 18 прокси\n\n"
+        "🇱🇹 LT (Литва)\n"
+        "Вильнюс\n"
+        "88.216.43. - 12 прокси\n"
+        "\n\n"
+        "После выполнения этой функции станет доступна кнопка <b>\"Скопировать все IP-адреса\"</b>, которая выдает список всех IP-адресов страны, ISO-код которой был введен в тексте запроса.\n"
+        "Если в тексте запроса не был указан ISO-код страны, команда выводит все определенные IP-адреса.\n\n"
+        "<b>Пример вывода кнопки \"Скопировать все IP-адреса\":</b>\n"
+        "\n"
+        "171.22.76. - 12 прокси\n"
+        "102.129.221. - 7 прокси\n"
+        "181.214.117. - 6 прокси\n"
+        "195.96.157. - 18 прокси\n"
+        "88.216.43. - 12 прокси\n"
+        "176.100.44. - 9 прокси\n"
+        "\n\n"
+        "<b>Отфильтровать IP:</b>\n"
+        "1. Введите первый текст со списком IP-адресов.\n"
+        "2. Введите второй текст со списком IP-адресов, которые нужно исключить из первого списка.\n"
+        "3. Бот выведет отфильтрованный список IP-адресов."
+    )
+
 # кнопки для выбора действия
 start_keyboard = ReplyKeyboardMarkup(
     keyboard=[
@@ -55,14 +115,15 @@ start_keyboard = ReplyKeyboardMarkup(
 keyboard_choice = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="Проверить страну по IP-адресу", callback_data="check_country")],
-        [InlineKeyboardButton(text="Фильтровать IP", callback_data="filter_ips_1")]
+        [InlineKeyboardButton(text="Фильтровать IP", callback_data="filter_ips_1")],
+        [InlineKeyboardButton(text="Помощь", callback_data="help")]
 
     ]
 )
 
 keyboard_copy = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Скопировать все IP-адреса", callback_data="copy_ips")],
+        [InlineKeyboardButton(text="Отфильтровать IP-адреса по стране", callback_data="copy_ips")],
         [InlineKeyboardButton(text="Назад", callback_data="back_to_choice")]
     ]
 )
@@ -72,15 +133,6 @@ keyboard_back = InlineKeyboardMarkup(
         [InlineKeyboardButton(text="Назад", callback_data="back_to_choice")]
     ]
 )
-
-# async def log_user_action(func):
-#    def wrapper(*args, **kwargs):
-#        message = args[0]
-#        logger.info(f"Пользователь: {message.from_user.id}\nЗапрос:\n{message.text}")
-#        result = func(*args, **kwargs)
-#        logger.info(f"Ответ:\n{result}")
-#        return result
-#    return wrapper
 
 # функция для обновления базы
 async def download_database(user_id):
@@ -128,7 +180,10 @@ async def is_update_needed(user_id):
 
 # функция фильтрации списков IP-адресов
 async def to_filter_ips(first_input, second_input):
-    return set(re.findall(pattern, first_input)).difference(set(re.findall(pattern, second_input)))
+    first_list = re.findall(pattern, first_input)
+    second_list = re.findall(pattern, second_input)
+
+    return [ip for ip in first_list if ip not in second_list]
 
 # функция для обработки текста и получения IP-адресов
 async def get_ip_info(text_input: str):
@@ -136,8 +191,6 @@ async def get_ip_info(text_input: str):
     target_country = text_input[:2]
     ip_list_text = text_input.splitlines()
     new_text_dict, result_copy = {}, []
-    if text_input[:2].isalpha() and text_input[:2].isupper():
-        new_text_dict[target_country] = {}
     if all_ips:
         with (geoip2.database.Reader(database_filename) as city_file):
             for line in ip_list_text:
@@ -153,44 +206,51 @@ async def get_ip_info(text_input: str):
                     if not city:
                         city = capitals[country_en]
                     flag = countryflag.getflag([country_id])
-                    if country_id == target_country:
-                        new_text_dict[country_id] = {'head': f'{flag} {country_id} ({country_ru})'}
-                        result_copy.append(line.replace(match.group(), f"<code>{ip_original}</code>"))
+                    if text_input[:2].isalpha() and text_input[:2].isupper():
+                        if target_country not in new_text_dict:
+                            new_text_dict[target_country] = {'head': f'\n{countryflag.getflag([target_country])} {target_country}'}
+                        if 'cities' not in new_text_dict[target_country]:
+                            new_text_dict[target_country]['cities'] = {}
                     if country_id not in new_text_dict:
-                        new_text_dict[country_id] = {'head': f'{flag} {country_id} ({country_ru})'}
-                    if 'cities' not in new_text_dict[country_id]:
-                        new_text_dict[country_id]['cities'] = {}
-                    if city not in new_text_dict[country_id]['cities']:
-                        new_text_dict[country_id]['cities'][city] = []
-                    new_text_dict[country_id]['cities'][city].append(line.replace(match.group(), f"<code>{ip_original}</code>"))
-
+                        new_text_dict[country_id] = {'head': f'\n{flag} {country_id} ({country_ru})', 'cities': {}}
+                    if target_country == country_id:
+                        if country_ru not in new_text_dict[country_id]['head']:
+                            new_text_dict[country_id]['head'] += f' ({country_ru})'
+                        add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city, target_flag=True)
+                    else:
+                        add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
         result = []
 
-    for k, v in new_text_dict.items():
-        # print(f'k={k}')
-        # result.append(f'<b>{k}</b>')
-        for k1, v1 in v.items():
-            # print(f'k1={k1}')
-            print(f'type(v1)={type(v1)}')
-            if type(v1) == str:
-                # print(f'v1={v1}')
-                result.append(f'<b>{v1}</b>')
-            if type(v1) == dict:
-                for k2, v2 in v1.items():
-                    # print(f'type(k2)={type(k2)}')
-                    # print(f'type(v2)={type(v2)}')
-                    result.append(f'<b>{k2}</b>')
-                    print(f'k2={k2}')
-                    # print(len(v2))
-                    for i in v2:
-                        print(f'v2 (i) = {i}')
-                        result.append(i)
-    return result, result_copy
+    for ISO, v in new_text_dict.items():
+        for country_dictionary, dictionary_content in v.items():
+            if isinstance(dictionary_content, str):
+                result.append(dictionary_content)
+            elif isinstance(dictionary_content, dict):
+                for city_name, v2 in dictionary_content.items():
+                    result.append(city_name)
+                    for ip_addresses in v2:
+                        result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
+        return result, result_copy
+    else:
+        return [], []
+
+
+# функция добавления городов с IP-адресами в результирующие списки
+def add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city, target_flag=False):
+    if city not in new_text_dict[country_id]['cities']:
+        new_text_dict[country_id]['cities'][city] = []
+    new_text_dict[country_id]['cities'][city].append(line.replace(match.group(), f"<code>{ip_original}</code>"))
+    if target_flag:
+        result_copy.append(line.replace(match.group(), f"<code>{ip_original}</code>"))
 
 # обработка команды /start
 @dp.message(CommandStart())
 async def command_start_handler(message: Message):
     await message.answer(f"Здравствуйте! Выберете нужное действие:", reply_markup=keyboard_choice)
+
+@dp.message(Command("help"))
+async def command_help_handler(message: Message):
+    await message.answer(help_text, parse_mode='HTML', reply_markup=keyboard_choice)
 
 # обработка callback-запросов от кнопок
 @dp.callback_query()
@@ -200,30 +260,38 @@ async def handle_callback(query: CallbackQuery):
     # сценарий № 1: определение страны по IP-адресу
     if query.data == 'check_country':
         user_states[user_id] = 'awaiting_check_country'
-        await query.message.answer("Введите текст с IP-адресами, и я определю их местоположение (не более 50 IP-адресов за один запрос)", reply_markup=keyboard_back)
+        await query.message.answer("Введите текст с IP-адресами, и я определю их местоположение (не более 50 IP-адресов за один запрос).", reply_markup=keyboard_back)
 
     # сценарий № 2: фильтрация списков IP-адресов (основной список)
     elif query.data == 'filter_ips_1':
         user_states[user_id] = 'awaiting_filter_first_input'
-        await query.message.answer("Введите список IP-адресов, которые нужно отфильтровать", reply_markup=keyboard_back)
+        await query.message.answer("Введите список IP-адресов, которые нужно отфильтровать.", reply_markup=keyboard_back)
 
     # сценарий № 3: фильтрация списков IP-адресов (второй список)
     elif query.data == 'filter_ips_2':
         user_states[user_id] = 'awaiting_filter_second_input'
-        await query.message.answer("Введите второй список IP-адресов", reply_markup=keyboard_back)
+        await query.message.answer("Введите второй список IP-адресов.", reply_markup=keyboard_back)
 
     # сценарий № 4: вывод IP-адресов в столбик для копирования
     elif query.data == 'copy_ips':
-        ips_to_copy = user_data.get(user_id, [])
-        if ips_to_copy:
-            # отправляем список IP-адресов пользователю
-            formatted_ips = "\n".join(ips_to_copy)
-            await query.message.answer(formatted_ips, reply_markup=keyboard_back)
-            user_states[user_id] = 'awaiting_check_country'
+        result_copy = user_data.get(user_id, [])
+        if not result_copy:
+            await query.message.answer("Не указана страна для фильтрации IP-адресов. Введите текст снова с указанием ISO-кода страны.", reply_markup=keyboard_back)
         else:
-            await query.message.answer("Нет сохраненных IP-адресов для копирования.", reply_markup=keyboard_back)
-            user_states[user_id] = 'awaiting_check_country'
+            if all(isinstance(item, str) for item in result_copy):
+                # отправляем список IP-адресов пользователю
+                formatted_ips = "\n".join(result_copy)
+                await query.message.answer(formatted_ips, parse_mode="HTML", reply_markup=keyboard_back)
+            else:
+                flat_ips = list(chain.from_iterable(
+                    item if isinstance(item, list) else [item] for item in result_copy))
+                formatted_ips = "\n".join(flat_ips)
+                await query.message.answer(formatted_ips, parse_mode="HTML", reply_markup=keyboard_back)
+        user_states[user_id] = 'awaiting_check_country'
 
+    # сценарий № 5: помощь (справка)
+    elif query.data == "help":
+        await query.message.answer(help_text, parse_mode="HTML", reply_markup=keyboard_choice)
     elif query.data == "back_to_choice":
         await query.message.answer(text='Выберете нужное действие:', reply_markup=keyboard_choice
         )
@@ -240,14 +308,12 @@ async def handle_text(message: Message):
     # сценарий № 1: определение страны по IP-адресу
     if user_state == 'awaiting_check_country':
         try:
-            result, result_to_copy = await get_ip_info(message.text)
-            #print(result)
-            #print(result_to_copy)
+            result, result_copy = await get_ip_info(message.text)
             if result:
                 await message.answer('\n'.join(result), parse_mode="HTML", reply_markup=keyboard_copy)
-                user_data[user_id] = [result_to_copy]
+                user_data[user_id] = result_copy
             else:
-                await message.answer('Во введенном текст IP-адреса не найдены.', parse_mode="HTML", reply_markup=keyboard_copy)
+                await message.answer('Во введенном текст IP-адреса не найдены. Попробуй еще раз.', parse_mode="HTML", reply_markup=keyboard_back)
         except Exception as e:
             await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_copy)
             user_states[user_id] = 'awaiting_check_country'
