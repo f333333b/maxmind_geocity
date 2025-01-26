@@ -220,7 +220,6 @@ async def get_ip_info(text_input: str):
                     else:
                         add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
         result = []
-
     for ISO, v in new_text_dict.items():
         for country_dictionary, dictionary_content in v.items():
             if isinstance(dictionary_content, str):
@@ -230,16 +229,14 @@ async def get_ip_info(text_input: str):
                     result.append(city_name)
                     for ip_addresses in v2:
                         result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
-        return result, result_copy
-    else:
-        return [], []
-
+    return result, result_copy
 
 # функция добавления городов с IP-адресами в результирующие списки
 def add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city, target_flag=False):
     if city not in new_text_dict[country_id]['cities']:
         new_text_dict[country_id]['cities'][city] = []
-    new_text_dict[country_id]['cities'][city].append(line.replace(match.group(), f"<code>{ip_original}</code>"))
+    if line.replace(match.group(), f"<code>{ip_original}</code>") not in new_text_dict[country_id]['cities'][city]:
+        new_text_dict[country_id]['cities'][city].append(line.replace(match.group(), f"<code>{ip_original}</code>"))
     if target_flag:
         result_copy.append(line.replace(match.group(), f"<code>{ip_original}</code>"))
 
@@ -276,7 +273,7 @@ async def handle_callback(query: CallbackQuery):
     elif query.data == 'copy_ips':
         result_copy = user_data.get(user_id, [])
         if not result_copy:
-            await query.message.answer("Не указана страна для фильтрации IP-адресов. Введите текст снова с указанием ISO-кода страны.", reply_markup=keyboard_back)
+            await query.message.answer('Не указана страна для фильтрации IP-адресов. Введите текст с указанием ISO-кода страны (например, для США - "US").', reply_markup=keyboard_back)
         else:
             if all(isinstance(item, str) for item in result_copy):
                 # отправляем список IP-адресов пользователю
