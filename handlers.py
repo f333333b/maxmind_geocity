@@ -30,12 +30,12 @@ async def handle_callback(query: CallbackQuery):
     # сценарий № 1: определение геолокации IP-адресов
     if query.data == 'basic_check':
         user_states[user_id] = 'awaiting_basic_check'
-        await query.message.answer("Введите текст с IP-адресами, и я определю их местоположение", reply_markup=keyboard_back)
+        await query.message.answer("Введите текст с IP-адресами.", reply_markup=keyboard_back)
 
     # сценарий № 2: определение геолокации IP-адресов с фильтрацией по стране
     elif query.data == 'target_check':
         user_states[user_id] = 'awaiting_target_check'
-        await query.message.answer("Введите текст с IP-адресами с указанием в качестве первых двух букв ISO-кода страны, и я определю их местоположение",
+        await query.message.answer("Введите текст с IP-адресами.\nПервыми двумя буквами текста укажите\nISO-код страны.",
             reply_markup=keyboard_back)
 
     # сценарий № 3: фильтрация списков IP-адресов (основной список)
@@ -79,20 +79,21 @@ async def handle_text(message: Message):
     user_id = message.from_user.id
     user_state = user_states.get(user_id)
 
-    # проверяем наличие актуальной скачанной базы данных
+    # проверка на наличие актуальной скачанной базы данных
     update_result = await is_update_needed(user_id)
     if update_result == 'error':
         await message.answer(f"При обновлении базы данных возникла ошибка. Попробуйте позднее.")
 
+    # проверка на ввод неверной команды
+    if message.text.startswith('/') and message.text.count('\n') <= 1:
+        await message.answer(f'Неизвестная команда.\nДля получения справки наберите /help.', reply_markup=keyboard_back)
+
     # сценарий № 1: определение геолокации IP-адресов с фильтрацией по стране
-    if user_state == 'awaiting_target_check':
+    elif user_state == 'awaiting_target_check':
         try:
-            result, result_copy = await get_ip_info(message.text)
+            result, result_copy = await get_ip_info(message.text, target_flag=True)
             if result:
-                if result == 'invalid ip':
-                    await message.answer('Введенный IP-адрес отсутствует в базе данных.', parse_mode="HTML", reply_markup=keyboard_back)
-                    user_states[user_id] = 'awaiting_target_check'
-                elif result == 'invalid iso':
+                if result == 'invalid iso':
                     await message.answer('Введен неверный ISO-код страны.', parse_mode="HTML", reply_markup=keyboard_back)
                     user_states[user_id] = 'awaiting_target_check'
                 elif isinstance(result, list):
@@ -111,12 +112,9 @@ async def handle_text(message: Message):
     # сценарий # 2: определение геолокации IP-адресов
     elif user_state == 'awaiting_basic_check':
         try:
-            result = await get_ip_info(message.text)[0]
+            result, result_copy = await get_ip_info(message.text, target_flag=False)
             if result:
-                if result == 'invalid ip': # исправить
-                    await message.answer('Введенный IP-адрес отсутствует в базе данных.', parse_mode="HTML", reply_markup=keyboard_back)
-                    user_states[user_id] = 'awaiting_basic_check'
-                elif result == 'invalid iso':
+                if result == 'invalid iso':
                     await message.answer('Введен неверный ISO-код страны.', parse_mode="HTML", reply_markup=keyboard_back)
                     user_states[user_id] = 'awaiting_basic_check'
                 elif isinstance(result, list):

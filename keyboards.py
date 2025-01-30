@@ -11,8 +11,8 @@ start_keyboard = ReplyKeyboardMarkup(
 
 keyboard_choice = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Определить геолокации IP-адресов", callback_data="basic_check")],
-        [InlineKeyboardButton(text="Определить геолокации IP-адресов с фильтрацией по стране", callback_data="target_check")],
+        [InlineKeyboardButton(text="Определить геолокацию по IP-адресам", callback_data="basic_check")],
+        [InlineKeyboardButton(text="Определить геолокацию с фильтрацией по стране", callback_data="target_check")],
         [InlineKeyboardButton(text="Фильтровать IP-адреса", callback_data="filter_ips_1")],
         [InlineKeyboardButton(text="Помощь", callback_data="help")]
 
