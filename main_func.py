@@ -6,6 +6,7 @@ import pycountry
 import traceback
 from capitals import capitals
 from config import pattern, database_filename
+from aiogram.types import BotCommand
 
 # функция фильтрации списков IP-адресов
 async def to_filter_ips(first_input, second_input):
@@ -24,17 +25,12 @@ async def get_ip_info(text_input: str, target_flag: bool):
         if target_flag:
             try:
                 target_country_iso = text_input[:2].upper()
-                if not (target_country_iso.isalpha() and target_country_iso.isascii()):
+                if (not (target_country_iso.isalpha() and target_country_iso.isascii()) and
+                        pycountry.countries.get(alpha_2=target_country_iso)):
                     result = 'invalid iso'
                     raise Exception(result)
-                if not pycountry.countries.get(alpha_2=target_country_iso):
-                    result = 'invalid iso'
-                    raise Exception(result)
-                if target_country_iso not in new_text_dict:
-                    new_text_dict[target_country_iso] = {
-                        'head': f'\n{countryflag.getflag([target_country_iso])} {target_country_iso}'}
-                    if 'cities' not in new_text_dict[target_country_iso]:
-                        new_text_dict[target_country_iso]['cities'] = {}
+                valid_target = True
+                new_text_dict[target_country_iso] = {'head': f'\n{countryflag.getflag([target_country_iso])} {target_country_iso}', 'cities': {}}
             except Exception as e:
                 return 'invalid iso', ''
         with geoip2.database.Reader(database_filename) as city_file:
@@ -57,6 +53,7 @@ async def get_ip_info(text_input: str, target_flag: bool):
                         if target_flag:
                             if target_country_iso == country_id:
                                 await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city, target_flag=True)
+                            await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
                         else:
                             await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
                     # когда IP-адрес не найден в базе данных
@@ -65,23 +62,22 @@ async def get_ip_info(text_input: str, target_flag: bool):
                             new_text_dict['Unknown'] = {}
                             if 'cities' not in new_text_dict['Unknown']:
                                 new_text_dict['Unknown']['cities'] = {}
-                                if 'Unknown' not in new_text_dict['Unknown']['cities']:
-                                    new_text_dict['Unknown']['cities']['Unknown'] = []
-                            new_text_dict['Unknown']['cities']['Unknown'].append(
+                                if '\n❌Invalid IP' not in new_text_dict['Unknown']['cities']:
+                                    new_text_dict['Unknown']['cities']['\n❌Invalid IP'] = []
+                            new_text_dict['Unknown']['cities']['\n❌Invalid IP'].append(
                                 line.replace(match.group(), f"<code>{ip_original}</code>"))
             if not result:
                 for ISO, v in new_text_dict.items():
                     for country_dictionary, dictionary_content in v.items():
                         if isinstance(dictionary_content, str):
-                            print(dictionary_content)
                             result.append(dictionary_content)
                         elif isinstance(dictionary_content, dict):
                             for city_name, v2 in dictionary_content.items():
-                                print(city_name)
                                 result.append(city_name)
                                 for ip_addresses in v2:
                                     result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
-                                    print(ip_addresses)
+    if valid_target and not result_copy:
+        result_copy = 'empty'
     return result, result_copy
 
 # функция добавления городов с IP-адресами в результирующие списки

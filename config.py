@@ -13,7 +13,9 @@ url = (
     f"edition_id=GeoLite2-City&license_key={LICENSE_KEY}"
     f"&suffix=tar.gz"
 )
+
 pattern = r'\d+\.\d+\.\d+'
+commands = ['/start', '/help', '/language']
 
 # отслеживание состояния пользователя
 user_states = {}
