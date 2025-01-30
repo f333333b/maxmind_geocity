@@ -37,8 +37,8 @@ async def get_ip_info(text_input: str):
                         if not city:
                             city = capitals[country_en]
                         flag = countryflag.getflag([country_id])
-                        iso_input = text_input[:2]
-                        if iso_input.isalpha() and iso_input.isupper():
+                        iso_input = text_input[:2].upper()
+                        if iso_input.isalpha() and iso_input.isascii():
                             try:
                                 pycountry.countries.get(alpha_2=iso_input)
                                 if target_country not in new_text_dict:

@@ -27,22 +27,28 @@ async def command_help_handler(message: Message):
 async def handle_callback(query: CallbackQuery):
     user_id = query.from_user.id
 
-    # сценарий № 1: определение страны по IP-адресу
-    if query.data == 'check_country':
-        user_states[user_id] = 'awaiting_check_country'
+    # сценарий № 1: определение геолокации IP-адресов
+    if query.data == 'basic_check':
+        user_states[user_id] = 'awaiting_basic_check'
         await query.message.answer("Введите текст с IP-адресами, и я определю их местоположение", reply_markup=keyboard_back)
 
-    # сценарий № 2: фильтрация списков IP-адресов (основной список)
+    # сценарий № 2: определение геолокации IP-адресов с фильтрацией по стране
+    elif query.data == 'target_check':
+        user_states[user_id] = 'awaiting_target_check'
+        await query.message.answer("Введите текст с IP-адресами с указанием в качестве первых двух букв ISO-кода страны, и я определю их местоположение",
+            reply_markup=keyboard_back)
+
+    # сценарий № 3: фильтрация списков IP-адресов (основной список)
     elif query.data == 'filter_ips_1':
         user_states[user_id] = 'awaiting_filter_first_input'
         await query.message.answer("Введите список IP-адресов, которые нужно отфильтровать.", reply_markup=keyboard_back)
 
-    # сценарий № 3: фильтрация списков IP-адресов (второй список)
+    # сценарий № 4: фильтрация списков IP-адресов (второй список)
     elif query.data == 'filter_ips_2':
         user_states[user_id] = 'awaiting_filter_second_input'
         await query.message.answer("Введите второй список IP-адресов.", reply_markup=keyboard_back)
 
-    # сценарий № 4: вывод IP-адресов в столбик для копирования
+    # сценарий № 5: вывод IP-адресов в столбик для копирования
     elif query.data == 'copy_ips':
         result_copy = user_data.get(user_id, [])
         if not result_copy:
@@ -61,12 +67,11 @@ async def handle_callback(query: CallbackQuery):
                 await query.message.answer(formatted_ips, parse_mode="HTML", reply_markup=keyboard_back)
         user_states[user_id] = 'awaiting_check_country'
 
-    # сценарий № 5: помощь (справка)
+    # сценарий № 6: помощь (справка)
     elif query.data == "help":
         await query.message.answer(help_text, parse_mode="HTML", reply_markup=keyboard_choice)
     elif query.data == "back_to_choice":
-        await query.message.answer(text='Выберете нужное действие:', reply_markup=keyboard_choice
-        )
+        await query.message.answer(text='Выберете нужное действие:', reply_markup=keyboard_choice)
 
 # обработка сообщений
 @router.message()
@@ -79,17 +84,17 @@ async def handle_text(message: Message):
     if update_result == 'error':
         await message.answer(f"При обновлении базы данных возникла ошибка. Попробуйте позднее.")
 
-    # сценарий № 1: определение страны по IP-адресу
-    if user_state == 'awaiting_check_country':
+    # сценарий № 1: определение геолокации IP-адресов с фильтрацией по стране
+    if user_state == 'awaiting_target_check':
         try:
             result, result_copy = await get_ip_info(message.text)
             if result:
                 if result == 'invalid ip':
                     await message.answer('Введенный IP-адрес отсутствует в базе данных.', parse_mode="HTML", reply_markup=keyboard_back)
-                    user_states[user_id] = 'awaiting_check_country'
+                    user_states[user_id] = 'awaiting_target_check'
                 elif result == 'invalid iso':
                     await message.answer('Введен неверный ISO-код страны.', parse_mode="HTML", reply_markup=keyboard_back)
-                    user_states[user_id] = 'awaiting_check_country'
+                    user_states[user_id] = 'awaiting_target_check'
                 elif isinstance(result, list):
                     await message.answer('\n'.join(str(item) for item in result), parse_mode="HTML", reply_markup=keyboard_copy)
                     user_data[user_id] = result_copy
@@ -99,11 +104,34 @@ async def handle_text(message: Message):
                 await message.answer('Во введенном тексте IP-адреса не найдены. Попробуйте еще раз.', parse_mode="HTML", reply_markup=keyboard_back)
         except Exception as e:
             await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_copy)
-            user_states[user_id] = 'awaiting_check_country'
+            user_states[user_id] = 'awaiting_target_check'
             logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
             logging.error(traceback.format_exc())
 
-    # сценарий № 2: фильтрация списков IP-адресов (основной список)
+    # сценарий # 2: определение геолокации IP-адресов
+    elif user_state == 'awaiting_basic_check':
+        try:
+            result = await get_ip_info(message.text)[0]
+            if result:
+                if result == 'invalid ip': # исправить
+                    await message.answer('Введенный IP-адрес отсутствует в базе данных.', parse_mode="HTML", reply_markup=keyboard_back)
+                    user_states[user_id] = 'awaiting_basic_check'
+                elif result == 'invalid iso':
+                    await message.answer('Введен неверный ISO-код страны.', parse_mode="HTML", reply_markup=keyboard_back)
+                    user_states[user_id] = 'awaiting_basic_check'
+                elif isinstance(result, list):
+                    await message.answer('\n'.join(str(item) for item in result), parse_mode="HTML", reply_markup=keyboard_back)
+                else:
+                    await message.answer(result, parse_mode="HTML", reply_markup=keyboard_back)
+            else:
+                await message.answer('Во введенном тексте IP-адреса не найдены. Попробуйте еще раз.', parse_mode="HTML", reply_markup=keyboard_back)
+        except Exception as e:
+            await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_back)
+            user_states[user_id] = 'awaiting_basic_check'
+            logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
+            logging.error(traceback.format_exc())
+
+    # сценарий № 3: фильтрация списков IP-адресов (первый список)
     elif user_state == 'awaiting_filter_first_input':
         if re.findall(pattern, message.text):
             try:
@@ -118,7 +146,7 @@ async def handle_text(message: Message):
             await message.answer("Введенный текст не содержит IP-адреса.", reply_markup=keyboard_back)
             user_states[user_id] = 'awaiting_filter_first_input'
 
-    # сценарий № 3: фильтрация списков IP-адресов (второй список)
+    # сценарий № 4: фильтрация списков IP-адресов (второй список)
     elif user_state == 'awaiting_filter_second_input':
         second_ips = message.text
         if not re.findall(pattern, second_ips):
@@ -145,7 +173,7 @@ async def handle_text(message: Message):
                 await message.answer("Ошибка: не был получен первый список IP-адресов.")
                 user_states[user_id] = 'awaiting_filter_first_input'
 
-    # сценарий № 4: обновление базы данных в процессе
+    # сценарий № 5: обновление базы данных в процессе
     elif user_state == 'awaiting_database_update':
         await message.answer(f"База данных обновляется, пожалуйста, подождите.")
 
