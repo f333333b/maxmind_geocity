@@ -2,15 +2,14 @@ import logging
 import re
 import traceback
 from aiogram.filters import CommandStart, Command
-from aiogram.types import Message, CallbackQuery, InlineQueryResultArticle, InputTextMessageContent
+from aiogram.types import Message, CallbackQuery
 from aiogram import Router
 from itertools import chain
 from help import help_text
-#from messages import msgs
 from keyboards import keyboard_choice, keyboard_back, keyboard_copy
 from db_updating import is_update_needed
 from main_func import get_ip_info, to_filter_ips
-from config import pattern, user_states, user_data, user_ips
+from config import pattern_subnet, user_states, user_data, user_ips
 
 router = Router()
 
@@ -135,7 +134,7 @@ async def handle_text(message: Message):
 
     # сценарий № 3: фильтрация списков IP-адресов (первый список)
     elif user_state == 'awaiting_filter_first_input':
-        if re.findall(pattern, message.text):
+        if re.findall(pattern_subnet, message.text):
             try:
                 user_ips[user_id] = {'first': message.text}
                 await message.answer("Теперь введите второй список IP-адресов.", reply_markup=keyboard_back)
@@ -151,26 +150,25 @@ async def handle_text(message: Message):
     # сценарий № 4: фильтрация списков IP-адресов (второй список)
     elif user_state == 'awaiting_filter_second_input':
         second_ips = message.text
-        if not re.findall(pattern, second_ips):
+        if not re.findall(pattern_subnet, second_ips):
             await message.answer('Второй список не содержит IP-адреса. Введите второй список еще раз.', reply_markup=keyboard_back)
         else:
             first_ips = user_ips.get(user_id, {}).get('first', '')
             if first_ips.strip():
                 try:
                     filtered_ips = await to_filter_ips(first_ips, second_ips)
-                    result_filtered_ips = '\n'.join(filtered_ips)
+                    result_filtered_ips = f"Отфильтрованные IP-адреса:\n<code>{'</code>\n<code>'.join(filtered_ips)}</code>"
                     if filtered_ips:
                         await message.answer(f"Отфильтрованные IP-адреса:")
-                        await message.answer(f"{result_filtered_ips}", reply_markup=keyboard_back)
-                        user_states[user_id] = None  # сброс состояния после фильтрации
+                        await message.answer(f"{result_filtered_ips}", parse_mode='HTML', reply_markup=keyboard_back)
                     else:
                         await message.answer(f"Отфильтрованный список пуст. IP-адресов нет.", reply_markup=keyboard_back)
-                        user_states[user_id] = 'awaiting_filter_first_input'
                 except Exception as e:
                     await message.answer(f"Ошибка при фильтрации IP-адресов: {e} Попробуйте снова.", reply_markup=keyboard_back)
                     user_states[user_id] = 'awaiting_filter_first_input'
                     logging.error(f'Ошибка фильтрации для пользователя {user_id}: {e}')
                     logging.error(traceback.format_exc())
+                user_states[user_id] = 'awaiting_filter_first_input'
             else:
                 await message.answer("Ошибка: не был получен первый список IP-адресов.")
                 user_states[user_id] = 'awaiting_filter_first_input'

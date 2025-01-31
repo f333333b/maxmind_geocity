@@ -14,8 +14,9 @@ url = (
     f"&suffix=tar.gz"
 )
 
-pattern = r'\d+\.\d+\.\d+'
-commands = ['/start', '/help', '/language']
+pattern_ip = r'\d+\.\d+\.\d+\.\d+'
+pattern_subnet = r'\d+\.\d+\.\d+'
+commands = ['/start', '/help']
 
 # отслеживание состояния пользователя
 user_states = {}
