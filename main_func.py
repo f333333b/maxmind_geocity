@@ -28,6 +28,7 @@ async def get_ip_info(text_input: str, target_flag: bool):
     result = []
     valid_target = False
     subnet_flag = False
+    target_country_iso = ''
     if all_ips:
         if target_flag:
             try:
@@ -67,12 +68,10 @@ async def get_ip_info(text_input: str, target_flag: bool):
                                     result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
     if valid_target and not result_copy:
         result_copy = 'empty'
-    print("new_text_dict:", new_text_dict)
     return result, result_copy
 
 # функция добавления городов с IP-адресами в результирующие списки
 async def add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city, target_flag=False):
-    print(f"Добавляю: {ip_original} → {city}")
     if city not in new_text_dict[country_id]['cities']:
         new_text_dict[country_id]['cities'][city] = []
     if line.replace(match, f"<code>{ip_original}</code>") not in new_text_dict[country_id]['cities'][city]:
@@ -82,7 +81,6 @@ async def add_cities(new_text_dict, ip_original, result_copy, line, match, count
         result_copy.append(line.replace(ip_original, f"<code>{ip_original}</code>"))
 
 async def make_cities_dict(match, city_file, new_text_dict, target_flag, subnet_flag, target_country_iso, result_copy, line):
-    print(match, "→ make_cities_dict")
     ip_original = match
     ip = ip_original + '.0' if subnet_flag else ip_original
     try:
