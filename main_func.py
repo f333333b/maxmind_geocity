@@ -1,15 +1,70 @@
+import re
+import os
 import geoip2.database
 import geoip2.errors
 import countryflag
 import pycountry
+import logging
+from functools import wraps
 from capitals import capitals
-from config import pattern_subnet, pattern_ip, database_filename
+from config import pattern_subnet, pattern_ip, database_filename, user_loggers
+from aiogram.types import Message, CallbackQuery, ContentType
+
+# функция запуска логирования
+async def setup_user_logger(user_id):
+    if user_id in user_loggers:
+        user_loggers[user_id]
+
+    log_filename = f"logs/{user_id}.log"
+    os.makedirs(os.path.dirname(log_filename), exist_ok=True)
+    logger = logging.getLogger(str(user_id))
+
+    # отключение вывода логирования в консоль
+    logger.propagate = False
+
+    if not logger.handlers:
+        handler = logging.FileHandler(log_filename, encoding='utf-8')
+        formatter = logging.Formatter('%(asctime)s - %(message)s\n', datefmt='%Y-%m-%d %H:%M:%S')
+        handler.setFormatter(formatter)
+        logger.addHandler(handler)
+        logger.setLevel(logging.INFO)
+
+    user_loggers[user_id] = logger
+    return logger
+
+# функция декоратор для логирования сообщений
+def log_interaction(func):
+    @wraps(func)
+    async def wrapper(event, *args, **kwargs):
+        user_id = event.from_user.id
+        logger = await setup_user_logger(user_id)
+
+        if isinstance(event, Message):
+            if event.content_type == ContentType.TEXT:
+                text = event.text
+                logger.info(f"Пользователь ({user_id}) отправил сообщение:\n{text}")
+            else:
+                logger.info(f"Пользователь ({user_id}) отправил неподдерживаемый формат контента:\n{event.content_type}")
+        elif isinstance(event, CallbackQuery):
+            data = event.data
+            logger.info(f"Пользователь ({user_id}) нажал кнопку:\n{data}")
+
+        bot_response = await func(event, *args, **kwargs)
+        if bot_response:
+            if isinstance(bot_response, Message):
+                logger.info(f"Ответ бота:\n{bot_response.text if bot_response.text else 'Текст отсутствует'}")
+            elif isinstance(bot_response, CallbackQuery):
+                logger.info(f"Ответ бота:\n{bot_response.data}")
+            else:
+                logger.info(f"Ответ бота:\n{str(bot_response)}")
+        else:
+            logger.info("Ответ бота:\nпусто")
+
+        return bot_response
+    return wrapper
 
 # функция фильтрации списков IP-адресов
-import re
-
-
-async def to_filter_ips(first_input, second_input):
+async def filter_ips(first_input, second_input):
     first_ips = re.findall(pattern_ip, first_input)
     first_subnets = re.findall(pattern_subnet, first_input)
     second_ips = re.findall(pattern_ip, second_input)
@@ -19,6 +74,14 @@ async def to_filter_ips(first_input, second_input):
     first_list = first_ips + first_subnets
     second_list = second_ips + second_subnets
     return [ip for ip in first_list if ip not in second_list]
+
+# функция фильтрации по октету
+async def filter_by_octet(input_text, target_octet):
+    ips = re.findall(pattern_ip, input_text)
+    subnets = re.findall(pattern_subnet, input_text)
+    total = [subnet for subnet in subnets if not any(subnet in ip for ip in ips)]
+    result = [ip for ip in total if not ip[:ip.index('.')] == target_octet]
+    return result
 
 # функция для обработки текста и получения IP-адресов
 async def get_ip_info(text_input: str, target_flag: bool):
@@ -80,6 +143,7 @@ async def add_cities(new_text_dict, ip_original, result_copy, line, match, count
     if target_flag:
         result_copy.append(line.replace(ip_original, f"<code>{ip_original}</code>"))
 
+# функция создания словаря с городами
 async def make_cities_dict(match, city_file, new_text_dict, target_flag, subnet_flag, target_country_iso, result_copy, line):
     ip_original = match
     ip = ip_original + '.0' if subnet_flag else ip_original
