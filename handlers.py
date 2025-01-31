@@ -168,7 +168,7 @@ async def handle_text(message: Message):
                 try:
                     filtered_ips = await filter_ips(first_ips, second_ips)
                     if filtered_ips:
-                        result_filtered_ips = f"Отфильтрованные IP-адреса:\n<code>{'</code>\n<code>'.join(filtered_ips)}</code>"
+                        result_filtered_ips = "Отфильтрованные IP-адреса:\n<code>" + "</code>\n<code>".join(filtered_ips) + "</code>"
                         return await message.answer(f"{result_filtered_ips}", parse_mode='HTML', reply_markup=keyboard_back)
                     else:
                         return await message.answer(f"Отфильтрованный список пуст. IP-адресов нет.", reply_markup=keyboard_back)
