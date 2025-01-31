@@ -21,6 +21,7 @@ async def get_ip_info(text_input: str, target_flag: bool):
     ip_list_text = text_input.splitlines()
     new_text_dict, result_copy = {}, []
     result = []
+    valid_target = False
     if all_ips:
         if target_flag:
             try:
