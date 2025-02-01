@@ -13,8 +13,8 @@ keyboard_choice = InlineKeyboardMarkup(
     inline_keyboard=[
         [InlineKeyboardButton(text="Определить геолокацию по IP-адресам", callback_data="basic_check")],
         [InlineKeyboardButton(text="Определить геолокацию с фильтрацией по стране", callback_data="target_check")],
-        [InlineKeyboardButton(text="Фильтровать IP-адреса", callback_data="filter_ips_1")],
-        [InlineKeyboardButton(text="Фильтровать IP-адреса по первому октету", callback_data="callback_filter_by_octet")],
+        [InlineKeyboardButton(text="Отфильтровать IP-адреса", callback_data="filter_ips_1")],
+        [InlineKeyboardButton(text="Отфильтровать IP-адреса по первому октету", callback_data="callback_filter_by_octet")],
         [InlineKeyboardButton(text="Помощь", callback_data="help")]
 
     ]

@@ -65,8 +65,9 @@ async def handle_callback(query: CallbackQuery):
         elif result_copy == 'ips not found':
             return await query.message.answer('IP-адреса указанной страны не найдены в тексте.', reply_markup=keyboard_back)
         elif result_copy == 'empty':
-            return await query.message.answer('IP-адреса указанной страны отсутствуют в тексте.', parse_mode="HTML", reply_markup=keyboard_back)
             user_states[user_id] = 'awaiting_target_check'
+            return await query.message.answer('IP-адреса указанной страны отсутствуют в тексте.', parse_mode="HTML", reply_markup=keyboard_back)
+
         else:
             if all(isinstance(item, str) for item in result_copy):
                 # отправляем список IP-адресов пользователю
@@ -108,20 +109,20 @@ async def handle_text(message: Message):
             result, result_copy = await get_ip_info(message.text, target_flag=True)
             if result:
                 if result == 'invalid iso':
-                    return await message.answer('Введен неверный ISO-код страны.\nВведите текст заново, первыми двумя буквами укажите ISO-код страны.\nНапример, "US" для США.', parse_mode="HTML", reply_markup=keyboard_back)
                     user_states[user_id] = 'awaiting_target_check'
+                    return await message.answer('Введен неверный ISO-код страны.\nВведите текст заново, первыми двумя буквами укажите ISO-код страны.\nНапример, "US" для США.', parse_mode="HTML", reply_markup=keyboard_back)
                 elif isinstance(result, list):
-                    return await message.answer('\n'.join(str(item) for item in result), parse_mode="HTML", reply_markup=keyboard_copy)
                     user_data[user_id] = result_copy
+                    return await message.answer('\n'.join(str(item) for item in result), parse_mode="HTML", reply_markup=keyboard_copy)
                 else:
                     return await message.answer(result, parse_mode="HTML", reply_markup=keyboard_copy)
             else:
                 return await message.answer('Во введенном тексте IP-адреса не найдены. Попробуйте еще раз.', parse_mode="HTML", reply_markup=keyboard_back)
         except Exception as e:
-            return await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_copy)
             user_states[user_id] = 'awaiting_target_check'
             logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
             logging.error(traceback.format_exc())
+            return await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_copy)
 
     # сценарий # 2: определение геолокации IP-адресов
     elif user_state == 'awaiting_basic_check':
@@ -173,27 +174,28 @@ async def handle_text(message: Message):
                     else:
                         return await message.answer(f"Отфильтрованный список пуст. IP-адресов нет.", reply_markup=keyboard_back)
                 except Exception as e:
-                    return await message.answer(f"Ошибка при фильтрации IP-адресов: {e} Попробуйте снова.", reply_markup=keyboard_back)
                     user_states[user_id] = 'awaiting_filter_first_input'
                     logging.error(f'Ошибка фильтрации для пользователя {user_id}: {e}')
                     logging.error(traceback.format_exc())
+                    return await message.answer(f"Ошибка при фильтрации IP-адресов: {e} Попробуйте снова.", reply_markup=keyboard_back)
                 user_states[user_id] = 'awaiting_filter_first_input'
             else:
-                return await message.answer("Ошибка: не был получен первый список IP-адресов.")
                 user_states[user_id] = 'awaiting_filter_first_input'
+                return await message.answer("Ошибка: не был получен первый список IP-адресов.")
 
     # сценарий № 5: фильтрация списка IP-адресов по первому октету (ввод списка)
     elif user_state == 'awaiting_filter_octet_first':
         if re.findall(pattern_subnet, message.text):
             try:
                 user_ips[user_id] = {'first': message.text}
-                return await message.answer("Введите октет - число от 1 до 255, по которому нужно отфильтровать IP-адреса.", reply_markup=keyboard_back)
                 user_states[user_id] = 'awaiting_filter_octet_second'
+                return await message.answer("Введите октет - число от 1 до 255, по которому нужно отфильтровать IP-адреса.", reply_markup=keyboard_back)
             except Exception as e:
-                return await message.answer(f"При выполнении программы возникла ошибка: {e}.")
                 logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
                 logging.error(traceback.format_exc())
+                return await message.answer(f"При выполнении программы возникла ошибка: {e}.")
         else:
+            print('test')
             return await message.answer("Введенный текст не содержит IP-адреса.", reply_markup=keyboard_back)
 
     # сценарий № 6: фильтрация списка IP-адресов по первому октету (ввод октета)
@@ -205,6 +207,7 @@ async def handle_text(message: Message):
                     filtered_ips = await filter_by_octet(ips_input, message.text)
                     if filtered_ips:
                         result_filtered_ips = "Отфильтрованные IP-адреса:\n<code>" + "</code>\n<code>".join(filtered_ips) + "</code>"
+                        user_states[user_id] = 'awaiting_filter_octet_first'
                         return await message.answer(f"{result_filtered_ips}", parse_mode='HTML', reply_markup=keyboard_back)
                     else:
                         return await message.answer(f"Отфильтрованный список пуст. IP-адресов нет.", reply_markup=keyboard_back)
@@ -214,8 +217,9 @@ async def handle_text(message: Message):
             else:
                 return await message.answer('Введено неверное значение октета. Попробуйте еще раз.', reply_markup=keyboard_back)
         except Exception as e:
-            return await message.answer('Введено неверное значение октета. Попробуйте еще раз.', reply_markup=keyboard_back)
             user_states[user_id] = 'awaiting_filter_octet_second'
+            return await message.answer('Введено неверное значение октета. Попробуйте еще раз.', reply_markup=keyboard_back)
+
 
     # сценарий № 7: обновление базы данных в процессе
     elif user_state == 'awaiting_database_update':
