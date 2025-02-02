@@ -5,9 +5,12 @@ import geoip2.errors
 import countryflag
 import pycountry
 import logging
+import traceback
 from functools import wraps
 from capitals import capitals
-from config import pattern_subnets_and_ips, database_filename, user_loggers
+from messages import msg
+from keyboards import keyboard_copy, keyboard_back
+from config import pattern_subnets_and_ips, database_filename, user_loggers, user_states, user_data
 from aiogram.types import Message, CallbackQuery, ContentType
 
 # функция запуска логирования
@@ -67,12 +70,34 @@ def log_interaction(func):
 async def filter_ips(first_input, second_input):
     first = re.findall(pattern_subnets_and_ips, first_input)
     second = re.findall(pattern_subnets_and_ips, second_input)
-    result = [ip for ip in first if ip not in second]
+    result = list(dict.fromkeys([ip for ip in first if ip not in second]))
     return result
+
+# общая функция определения геолокации IP-адресов
+async def process_check(user_state_key, message, user_id, target_flag):
+    try:
+        result, result_copy = await get_ip_info(message.text, target_flag=target_flag)
+        if result:
+            if result == 'invalid iso':
+                user_states[user_id] = user_state_key
+                return await message.answer(msg['invalid_iso'], parse_mode="HTML", reply_markup=keyboard_back)
+            elif isinstance(result, list):
+                if target_flag:  # Сохраняем данные только для awaiting_target_check
+                    user_data[user_id] = result_copy
+                return await message.answer('\n'.join(str(item) for item in result), parse_mode="HTML", reply_markup=keyboard_copy if target_flag else None)
+            else:
+                return await message.answer(result, parse_mode="HTML", reply_markup=keyboard_copy if target_flag else None)
+        else:
+            return await message.answer(msg['no_ips'], parse_mode="HTML" if target_flag else None)
+    except Exception as e:
+        user_states[user_id] = user_state_key
+        logging.error(f"{msg['program_error']}: {e}.\nТекст запроса: {message.text}")
+        logging.error(traceback.format_exc())
+        return await message.answer(f"{msg['program_error']}: {e}.")
 
 # функция фильтрации по октету
 async def filter_by_octet(input_text, target_octet):
-    result = [ip for ip in re.findall(pattern_subnets_and_ips, input_text) if not ip.split('.')[0] == target_octet]
+    result = list(dict.fromkeys([ip for ip in re.findall(pattern_subnets_and_ips, input_text) if not ip.split('.')[0] == target_octet]))
     return result
 
 # функция для обработки текста и получения IP-адресов

@@ -15,9 +15,7 @@ url = (
 )
 
 # регулярное выражение для поиска подсетей и IP-адресов
-pattern_subnets_and_ips = r"\d+\.\d+\.\d+\.\d+|(?<!\.)\b\d+\.\d+\.\d+\b(?!\.\d)"
-
-commands = ['/start', '/help']
+pattern_subnets_and_ips = r"\d+\.\d+\.\d+\.\d+|(?<![\d\.])\d+\.\d+\.\d+(?!\.\d)"
 
 # отслеживание состояния пользователя
 user_states = {}

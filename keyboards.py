@@ -9,21 +9,22 @@ start_keyboard = ReplyKeyboardMarkup(
     one_time_keyboard=False
 )
 
-keyboard_choice = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="Определить геолокацию по IP-адресам", callback_data="basic_check")],
-        [InlineKeyboardButton(text="Определить геолокацию с фильтрацией по стране", callback_data="target_check")],
-        [InlineKeyboardButton(text="Отфильтровать IP-адреса", callback_data="filter_ips_1")],
-        [InlineKeyboardButton(text="Отфильтровать IP-адреса по первому октету", callback_data="callback_filter_by_octet")],
-        [InlineKeyboardButton(text="Помощь", callback_data="help")]
-
-    ]
+# постоянная клавиатура
+keyboard_main = ReplyKeyboardMarkup(
+    keyboard=[
+        [KeyboardButton(text="/check"),
+        KeyboardButton(text="/target"),
+        KeyboardButton(text="/filter"),
+        KeyboardButton(text="/filter_octet"),
+        KeyboardButton(text="/help")]
+    ],
+    resize_keyboard=True,
+    one_time_keyboard=False
 )
 
 keyboard_copy = InlineKeyboardMarkup(
     inline_keyboard=[
-        [InlineKeyboardButton(text="Отфильтровать IP-адреса по указанной стране", callback_data="copy_ips")],
-        [InlineKeyboardButton(text="Назад", callback_data="back_to_choice")]
+        [InlineKeyboardButton(text="Отфильтровать IP-адреса по указанной стране", callback_data="copy_ips")]
     ]
 )
 
