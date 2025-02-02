@@ -1,14 +1,5 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
-# кнопки для выбора действия
-start_keyboard = ReplyKeyboardMarkup(
-    keyboard=[
-        [KeyboardButton(text="/start")]
-    ],
-    resize_keyboard=True,
-    one_time_keyboard=False
-)
-
 # постоянная клавиатура
 keyboard_main = ReplyKeyboardMarkup(
     keyboard=[

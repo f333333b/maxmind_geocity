@@ -6,11 +6,12 @@ import countryflag
 import pycountry
 import logging
 import traceback
+from itertools import chain
 from functools import wraps
 from capitals import capitals
 from messages import msg
 from keyboards import keyboard_copy, keyboard_back
-from config import pattern_subnets_and_ips, database_filename, user_loggers, user_states, user_data
+from config import pattern, database_filename, user_loggers, user_states, user_data, user_ips
 from aiogram.types import Message, CallbackQuery, ContentType
 
 # функция запуска логирования
@@ -66,14 +67,7 @@ def log_interaction(func):
         return bot_response
     return wrapper
 
-# функция фильтрации списков IP-адресов
-async def filter_ips(first_input, second_input):
-    first = re.findall(pattern_subnets_and_ips, first_input)
-    second = re.findall(pattern_subnets_and_ips, second_input)
-    result = list(dict.fromkeys([ip for ip in first if ip not in second]))
-    return result
-
-# общая функция определения геолокации IP-адресов
+# функция определения геолокации IP-адресов
 async def process_check(user_state_key, message, user_id, target_flag):
     try:
         result, result_copy = await get_ip_info(message.text, target_flag=target_flag)
@@ -95,14 +89,22 @@ async def process_check(user_state_key, message, user_id, target_flag):
         logging.error(traceback.format_exc())
         return await message.answer(f"{msg['program_error']}: {e}.")
 
-# функция фильтрации по октету
-async def filter_by_octet(input_text, target_octet):
-    result = list(dict.fromkeys([ip for ip in re.findall(pattern_subnets_and_ips, input_text) if not ip.split('.')[0] == target_octet]))
-    return result
+# функция вывода отфильтрованных по стране IP-адресов
+async def process_target_output(user_id):
+    result_copy = user_data.get(user_id, [])
+    if not result_copy or result_copy == 'ips not found':
+        return None, msg['no_ips_to_copy']
+    else:
+        if all(isinstance(item, str) for item in result_copy):
+            return "\n".join(result_copy), None
+        else:
+            flat_ips = list(chain.from_iterable(
+                item if isinstance(item, list) else [item] for item in result_copy))
+            return "\n".join(flat_ips)
 
 # функция для обработки текста и получения IP-адресов
 async def get_ip_info(text_input: str, target_flag: bool):
-    all_ips = re.findall(pattern_subnets_and_ips, text_input)
+    all_ips = re.findall(pattern, text_input)
     ip_list_text = text_input.splitlines()
     new_text_dict, result_copy = {}, []
     result = []
@@ -121,7 +123,7 @@ async def get_ip_info(text_input: str, target_flag: bool):
                 return 'invalid iso', ''
         with geoip2.database.Reader(database_filename) as city_file:
             for line in ip_list_text:
-                match = re.findall(pattern_subnets_and_ips, line)
+                match = re.findall(pattern, line)
                 if match:
                     for match_instance in match:
                         await make_cities_dict(match_instance, city_file, new_text_dict, target_flag,
@@ -184,3 +186,61 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
                     new_text_dict['Unknown']['cities']['\n❌Invalid IP'] = []
             new_text_dict['Unknown']['cities']['\n❌Invalid IP'].append(
                 line.replace(match, f"<b><code>{ip_original}</code></b>"))
+
+# функция получения списка IP-адресов для фильтрации
+async def filter_ips_input(first_list, user_id, list_flag):
+    if not re.findall(pattern, first_list):
+        return msg['no_ips']
+    try:
+        user_ips[user_id] = {'first': first_list}
+        if list_flag:
+            user_states[user_id] = 'awaiting_filter_second_input'
+            return msg['filter_ips_second']
+        else:
+            user_states[user_id] = 'awaiting_filter_by_octet'
+            return msg['enter_octet']
+    except Exception as e:
+        logging.error(f"{msg['program_error']}: {e}.\nТекст запроса: {first_list}")
+        logging.error(traceback.format_exc())
+        return msg['program_error']
+
+# функция фильтрации списка IP-адресов по второму списку
+async def filter_ips_list(second_list, user_id):
+    if not re.findall(pattern, second_list):
+        return msg['no_ips_second']
+    else:
+        first_list = re.findall(pattern, user_ips[user_id]['first'])
+        second_list = re.findall(pattern, second_list)
+        result = list(dict.fromkeys([ip for ip in first_list if ip not in second_list]))
+        user_states[user_id] = 'awaiting_filter_first_input'
+        if result:
+            return "Отфильтрованные IP-адреса:\n<code>" + "</code>\n<code>".join(result) + "</code>"
+        else:
+            return msg['no_filtered_ips']
+
+# функция фильтрации по октету
+async def filter_by_octet(target_octet, user_id):
+    try:
+        target_octet = int(target_octet)
+    except ValueError:
+        logging.error(f"Неверно введенный октет: {target_octet}")
+        user_states[user_id] = 'awaiting_filter_octet_second'
+        return msg['invalid_octet']
+    if not 0 < target_octet < 256:
+        logging.error(f"Октет вне допустимого диапазона: {target_octet}")
+        user_states[user_id] = 'awaiting_filter_octet_second'
+        return msg['invalid_octet']
+    first_list = user_ips[user_id]['first']
+    found_ips = re.findall(pattern, first_list)
+    try:
+        result = list(dict.fromkeys([ip for ip in found_ips if ip.split('.')[0] != str(target_octet)]))
+        if not result:
+            user_states[user_id] = 'awaiting_filter_octet_list'
+            return msg['no_filtered_ips']
+        user_states[user_id] = 'awaiting_filter_octet_list'
+        return "Отфильтрованные IP-адреса:\n<code>" + "</code>\n<code>".join(result) + "</code>"
+    except Exception as e:
+        logging.error(f"Ошибка при фильтрации IP-адресов: {e}.\nТекст запроса: {first_list}")
+        logging.error(traceback.format_exc())
+        user_states[user_id] = 'awaiting_filter_octet_second'
+        return msg['filter_error']
