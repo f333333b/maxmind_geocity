@@ -14,8 +14,9 @@ url = (
     f"&suffix=tar.gz"
 )
 
-pattern_ip = r'\d+\.\d+\.\d+\.\d+'
-pattern_subnet = r'\d+\.\d+\.\d+'
+# регулярное выражение для поиска подсетей и IP-адресов
+pattern_subnets_and_ips = r"\d+\.\d+\.\d+\.\d+|(?<!\.)\b\d+\.\d+\.\d+\b(?!\.\d)"
+
 commands = ['/start', '/help']
 
 # отслеживание состояния пользователя

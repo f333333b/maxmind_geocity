@@ -7,7 +7,7 @@ import pycountry
 import logging
 from functools import wraps
 from capitals import capitals
-from config import pattern_subnet, pattern_ip, database_filename, user_loggers
+from config import pattern_subnets_and_ips, database_filename, user_loggers
 from aiogram.types import Message, CallbackQuery, ContentType
 
 # функция запуска логирования
@@ -65,70 +65,51 @@ def log_interaction(func):
 
 # функция фильтрации списков IP-адресов
 async def filter_ips(first_input, second_input):
-    first_ips = re.findall(pattern_ip, first_input)
-    first_subnets = re.findall(pattern_subnet, first_input)
-    second_ips = re.findall(pattern_ip, second_input)
-    second_subnets = re.findall(pattern_subnet, second_input)
-    first_subnets = [subnet for subnet in first_subnets if not any(subnet in ip for ip in first_ips)]
-    second_subnets = [subnet for subnet in second_subnets if not any(subnet in ip for ip in second_ips)]
-    first_list = first_ips + first_subnets
-    second_list = second_ips + second_subnets
-    return [ip for ip in first_list if ip not in second_list]
+    first = re.findall(pattern_subnets_and_ips, first_input)
+    second = re.findall(pattern_subnets_and_ips, second_input)
+    result = [ip for ip in first if ip not in second]
+    return result
 
 # функция фильтрации по октету
 async def filter_by_octet(input_text, target_octet):
-    ips = re.findall(pattern_ip, input_text)
-    subnets = re.findall(pattern_subnet, input_text)
-    total = [subnet for subnet in subnets if not any(subnet in ip for ip in ips)]
-    result = [ip for ip in total if not ip[:ip.index('.')] == target_octet]
+    result = [ip for ip in re.findall(pattern_subnets_and_ips, input_text) if not ip.split('.')[0] == target_octet]
     return result
 
 # функция для обработки текста и получения IP-адресов
 async def get_ip_info(text_input: str, target_flag: bool):
-    all_ips = re.findall(pattern_subnet, text_input)
+    all_ips = re.findall(pattern_subnets_and_ips, text_input)
     ip_list_text = text_input.splitlines()
     new_text_dict, result_copy = {}, []
     result = []
     valid_target = False
-    subnet_flag = False
     target_country_iso = ''
     if all_ips:
         if target_flag:
             try:
                 target_country_iso = text_input[:2].upper()
-                if (not (target_country_iso.isalpha() and target_country_iso.isascii()) and
-                        pycountry.countries.get(alpha_2=target_country_iso)):
-                    result = 'invalid iso'
-                    raise Exception(result)
+                if not (target_country_iso.isalpha() and target_country_iso.isascii()
+                        and pycountry.countries.get(alpha_2=target_country_iso)):
+                    return 'invalid iso', ''
                 valid_target = True
                 new_text_dict[target_country_iso] = {'head': f'\n{countryflag.getflag([target_country_iso])} {target_country_iso}', 'cities': {}}
             except Exception as e:
                 return 'invalid iso', ''
         with geoip2.database.Reader(database_filename) as city_file:
             for line in ip_list_text:
-                if re.findall(pattern_ip, line):
-                    match = re.findall(pattern_ip, line)
-                else:
-                    match = re.findall(pattern_subnet, line)
-                    subnet_flag = True
+                match = re.findall(pattern_subnets_and_ips, line)
                 if match:
-                    if isinstance(match, list):
-                        for match_instance in match:
-                            await make_cities_dict(match_instance, city_file, new_text_dict, target_flag, subnet_flag,
+                    for match_instance in match:
+                        await make_cities_dict(match_instance, city_file, new_text_dict, target_flag,
                                                    target_country_iso, result_copy, line)
-                    else:
-                        await make_cities_dict(match, city_file, new_text_dict, target_flag, subnet_flag,
-                                               target_country_iso, result_copy, line)
-            if not result:
-                for ISO, v in new_text_dict.items():
-                    for country_dictionary, dictionary_content in v.items():
-                        if isinstance(dictionary_content, str):
-                            result.append(dictionary_content)
-                        elif isinstance(dictionary_content, dict):
-                            for city_name, v2 in dictionary_content.items():
-                                result.append(city_name)
-                                for ip_addresses in v2:
-                                    result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
+            for ISO, v in new_text_dict.items():
+                for country_dictionary, dictionary_content in v.items():
+                    if isinstance(dictionary_content, str):
+                        result.append(dictionary_content)
+                    elif isinstance(dictionary_content, dict):
+                        for city_name, v2 in dictionary_content.items():
+                            result.append(city_name)
+                            for ip_addresses in v2:
+                                result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
     if valid_target and not result_copy:
         result_copy = 'empty'
     return result, result_copy
@@ -144,9 +125,12 @@ async def add_cities(new_text_dict, ip_original, result_copy, line, match, count
         result_copy.append(line.replace(ip_original, f"<code>{ip_original}</code>"))
 
 # функция создания словаря с городами
-async def make_cities_dict(match, city_file, new_text_dict, target_flag, subnet_flag, target_country_iso, result_copy, line):
+async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_country_iso, result_copy, line):
     ip_original = match
-    ip = ip_original + '.0' if subnet_flag else ip_original
+    if match.count('.') == 2:
+        ip = ip_original + '.0'
+    elif match.count('.') == 3:
+        ip = ip_original
     try:
         response = city_file.city(ip)
         country_id = response.country.iso_code
@@ -174,4 +158,4 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, subnet_
                 if '\n❌Invalid IP' not in new_text_dict['Unknown']['cities']:
                     new_text_dict['Unknown']['cities']['\n❌Invalid IP'] = []
             new_text_dict['Unknown']['cities']['\n❌Invalid IP'].append(
-                line.replace(match, f"<code>{ip_original}</code>"))
+                line.replace(match, f"<b><code>{ip_original}</code></b>"))

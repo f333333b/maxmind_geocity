@@ -9,7 +9,7 @@ from help import help_text
 from keyboards import keyboard_choice, keyboard_back, keyboard_copy
 from db_updating import is_update_needed
 from main_func import get_ip_info, filter_ips, filter_by_octet, log_interaction
-from config import pattern_subnet, user_states, user_data, user_ips
+from config import pattern_subnets_and_ips, user_states, user_data, user_ips
 
 router = Router()
 
@@ -23,7 +23,7 @@ async def handle_unsupported_content(message: Message):
 @router.message(CommandStart())
 @log_interaction
 async def command_start_handler(message: Message):
-    return await message.answer(f"Выберете нужное действие:", reply_markup=keyboard_choice)
+    return await message.answer(f"Выберете нужное действие:", reply_markup=keyboard_main)
 
 @router.message(Command("help"))
 @log_interaction
@@ -67,7 +67,6 @@ async def handle_callback(query: CallbackQuery):
         elif result_copy == 'empty':
             user_states[user_id] = 'awaiting_target_check'
             return await query.message.answer('IP-адреса указанной страны отсутствуют в тексте.', parse_mode="HTML", reply_markup=keyboard_back)
-
         else:
             if all(isinstance(item, str) for item in result_copy):
                 # отправляем список IP-адресов пользователю
@@ -130,8 +129,8 @@ async def handle_text(message: Message):
             result, result_copy = await get_ip_info(message.text, target_flag=False)
             if result:
                 if result == 'invalid iso':
-                    return await message.answer('Введен неверный ISO-код страны.\nПервыми двумя буквами в тексте укажите ISO-код страны.\nНапример, "US" для США.', parse_mode="HTML", reply_markup=keyboard_back)
                     user_states[user_id] = 'awaiting_basic_check'
+                    return await message.answer('Введен неверный ISO-код страны.\nПервыми двумя буквами в тексте укажите ISO-код страны.\nНапример, "US" для США.', parse_mode="HTML", reply_markup=keyboard_back)
                 elif isinstance(result, list):
                     return await message.answer('\n'.join(str(item) for item in result), parse_mode="HTML", reply_markup=keyboard_back)
                 else:
@@ -139,29 +138,29 @@ async def handle_text(message: Message):
             else:
                 return await message.answer('Во введенном тексте IP-адреса не найдены. Попробуйте еще раз.', parse_mode="HTML", reply_markup=keyboard_back)
         except Exception as e:
-            return await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_back)
             user_states[user_id] = 'awaiting_basic_check'
             logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
             logging.error(traceback.format_exc())
+            return await message.answer(f"При выполнении программы возникла ошибка: {e}.", reply_markup=keyboard_back)
 
     # сценарий № 3: фильтрация списков IP-адресов (первый список)
     elif user_state == 'awaiting_filter_first_input':
-        if re.findall(pattern_subnet, message.text):
+        if re.findall(pattern_subnets_and_ips, message.text):
             try:
                 user_ips[user_id] = {'first': message.text}
-                return await message.answer("Теперь введите второй список IP-адресов.", reply_markup=keyboard_back)
                 user_states[user_id] = 'awaiting_filter_second_input'
+                return await message.answer("Теперь введите второй список IP-адресов.", reply_markup=keyboard_back)
             except Exception as e:
-                return await message.answer(f"При выполнении программы возникла ошибка: {e}.")
                 logging.error(f"При выполнении программы возникла ошибка: {e}.\nТекст запроса: {message.text}")
                 logging.error(traceback.format_exc())
+                return await message.answer(f"При выполнении программы возникла ошибка: {e}.")
         else:
             return await message.answer("Введенный текст не содержит IP-адреса.", reply_markup=keyboard_back)
 
     # сценарий № 4: фильтрация списков IP-адресов (второй список)
     elif user_state == 'awaiting_filter_second_input':
         second_ips = message.text
-        if not re.findall(pattern_subnet, second_ips):
+        if not re.findall(pattern_subnets_and_ips, second_ips):
             return await message.answer('Второй список не содержит IP-адреса. Введите второй список еще раз.', reply_markup=keyboard_back)
         else:
             first_ips = user_ips.get(user_id, {}).get('first', '')
@@ -185,7 +184,7 @@ async def handle_text(message: Message):
 
     # сценарий № 5: фильтрация списка IP-адресов по первому октету (ввод списка)
     elif user_state == 'awaiting_filter_octet_first':
-        if re.findall(pattern_subnet, message.text):
+        if re.findall(pattern_subnets_and_ips, message.text):
             try:
                 user_ips[user_id] = {'first': message.text}
                 user_states[user_id] = 'awaiting_filter_octet_second'
@@ -195,7 +194,6 @@ async def handle_text(message: Message):
                 logging.error(traceback.format_exc())
                 return await message.answer(f"При выполнении программы возникла ошибка: {e}.")
         else:
-            print('test')
             return await message.answer("Введенный текст не содержит IP-адреса.", reply_markup=keyboard_back)
 
     # сценарий № 6: фильтрация списка IP-адресов по первому октету (ввод октета)
@@ -210,8 +208,8 @@ async def handle_text(message: Message):
                         user_states[user_id] = 'awaiting_filter_octet_first'
                         return await message.answer(f"{result_filtered_ips}", parse_mode='HTML', reply_markup=keyboard_back)
                     else:
+                        user_states[user_id] = 'awaiting_filter_octet_first'
                         return await message.answer(f"Отфильтрованный список пуст. IP-адресов нет.", reply_markup=keyboard_back)
-                    user_states[user_id] = 'awaiting_filter_octet_first'
                 except Exception as e:
                     return await message.answer(f"Ошибка при фильтрации IP-адресов: {e} Попробуйте снова.", reply_markup=keyboard_back)
             else:
@@ -219,7 +217,6 @@ async def handle_text(message: Message):
         except Exception as e:
             user_states[user_id] = 'awaiting_filter_octet_second'
             return await message.answer('Введено неверное значение октета. Попробуйте еще раз.', reply_markup=keyboard_back)
-
 
     # сценарий № 7: обновление базы данных в процессе
     elif user_state == 'awaiting_database_update':

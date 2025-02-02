@@ -6,7 +6,7 @@ start_keyboard = ReplyKeyboardMarkup(
         [KeyboardButton(text="/start")]
     ],
     resize_keyboard=True,
-    one_time_keyboard=True
+    one_time_keyboard=False
 )
 
 keyboard_choice = InlineKeyboardMarkup(
