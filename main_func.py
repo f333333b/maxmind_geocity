@@ -42,7 +42,6 @@ def log_interaction(func):
     async def wrapper(event, *args, **kwargs):
         user_id = event.from_user.id
         logger = await setup_user_logger(user_id)
-
         if isinstance(event, Message):
             if event.content_type == ContentType.TEXT:
                 text = event.text
@@ -52,7 +51,6 @@ def log_interaction(func):
         elif isinstance(event, CallbackQuery):
             data = event.data
             logger.info(f"Пользователь ({user_id}) нажал кнопку:\n{data}")
-
         bot_response = await func(event, *args, **kwargs)
         if bot_response:
             if isinstance(bot_response, Message):
@@ -63,7 +61,6 @@ def log_interaction(func):
                 logger.info(f"Ответ бота:\n{str(bot_response)}")
         else:
             logger.info("Ответ бота:\nпусто")
-
         return bot_response
     return wrapper
 
@@ -224,11 +221,9 @@ async def filter_by_octet(target_octet, user_id):
         target_octet = int(target_octet)
     except ValueError:
         logging.error(f"Неверно введенный октет: {target_octet}")
-        user_states[user_id] = 'awaiting_filter_octet_second'
         return msg['invalid_octet']
     if not 0 < target_octet < 256:
         logging.error(f"Октет вне допустимого диапазона: {target_octet}")
-        user_states[user_id] = 'awaiting_filter_octet_second'
         return msg['invalid_octet']
     first_list = user_ips[user_id]['first']
     found_ips = re.findall(pattern, first_list)
@@ -242,5 +237,5 @@ async def filter_by_octet(target_octet, user_id):
     except Exception as e:
         logging.error(f"Ошибка при фильтрации IP-адресов: {e}.\nТекст запроса: {first_list}")
         logging.error(traceback.format_exc())
-        user_states[user_id] = 'awaiting_filter_octet_second'
+        user_states[user_id] = 'awaiting_filter_by_octet'
         return msg['filter_error']

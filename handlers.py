@@ -104,16 +104,16 @@ async def handle_text(message: Message):
     elif user_state == 'awaiting_filter_first_input':
         return await message.answer(text=await filter_ips_input(message.text, user_id, list_flag=True), parse_mode="HTML")
 
-    # сценарий № 4: фильтрация списка IP-адресов по первому октету (ввод списка)
+    # сценарий № 4: фильтрация списков IP-адресов по списку (ввод второго списка)
+    elif user_state == 'awaiting_filter_second_input':
+        return await message.answer(text=await filter_ips_list(message.text, user_id), parse_mode="HTML")
+
+    # сценарий № 5: фильтрация списка IP-адресов по первому октету (ввод списка)
     elif user_state == 'awaiting_filter_octet_list':
         return await message.answer(text=await filter_ips_input(message.text, user_id, list_flag=False), parse_mode="HTML")
 
-    # сценарий № 5: фильтрация списков IP-адресов по списку (ввод второго списка)
-    elif user_state == 'awaiting_filter_second_input': # переименовать на awaiting_filter_list?
-        return await message.answer(text=await filter_ips_list(message.text, user_id), parse_mode="HTML")
-
     # сценарий № 6: фильтрация списка IP-адресов по первому октету (ввод октета)
-    elif user_state == 'awaiting_filter_by_octet': # переименовать на awaiting_filter_by_octet?
+    elif user_state == 'awaiting_filter_by_octet':
         return await message.answer(text=await filter_by_octet(message.text, user_id), parse_mode="HTML")
 
     # сценарий № 7: обновление базы данных в процессе

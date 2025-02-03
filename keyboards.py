@@ -14,5 +14,5 @@ keyboard_main = ReplyKeyboardMarkup(
 )
 
 keyboard_copy = InlineKeyboardMarkup(
-    inline_keyboard=[[InlineKeyboardButton(text="Отфильтровать IP-адреса по указанной стране", callback_data="copy_ips")]]
+    inline_keyboard=[[InlineKeyboardButton(text="Вывести строки с IP-адресами указанной страны", callback_data="copy_ips")]]
 )
