@@ -4,7 +4,7 @@ from aiogram import Router
 from keyboards import keyboard_main
 from db_updating import is_update_needed
 from main_func import process_check, process_target_output, filter_ips_input, filter_ips_list, filter_by_octet, log_interaction
-from config import user_states
+from config import user_states, user_data
 from commands import commands
 from messages import msg
 
@@ -67,7 +67,8 @@ async def command_filter_octet_handler(message: Message):
 async def handle_callback(query: CallbackQuery):
     user_id = query.from_user.id
     if query.data == 'copy_ips':
-        formatted_ips, error_message = await process_target_output(user_id)
+        result_copy = user_data.get(user_id, [])
+        formatted_ips, error_message = await process_target_output(result_copy)
         user_states[user_id] = 'awaiting_target_check'
         text = error_message or formatted_ips
         return await query.message.answer(text=text, parse_mode="HTML")

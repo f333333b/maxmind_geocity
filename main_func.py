@@ -87,8 +87,7 @@ async def process_check(user_state_key, message, user_id, target_flag):
         return await message.answer(f"{msg['program_error']}: {e}.")
 
 # функция вывода отфильтрованных по стране IP-адресов
-async def process_target_output(user_id):
-    result_copy = user_data.get(user_id, [])
+async def process_target_output(result_copy):
     if not result_copy or result_copy == 'ips not found':
         return None, msg['no_ips_to_copy']
     else:
