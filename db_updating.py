@@ -11,14 +11,26 @@ from messages import msg
 
 # функция для обновления базы
 async def download_database(user_id):
-    await bot.send_message(chat_id=user_id, text=msg['db_updating'])
+    updating_db = await bot.send_message(chat_id=user_id, text=msg['db_updating'])
     user_states[user_id] = 'awaiting_database_update'
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(url) as response:
                 if response.status == 200:
                     with open('database.tar.gz', 'wb') as file:
-                        file.write(await response.read())
+                        total_size = int(response.headers.get('content-length', 0))
+                        downloaded_size = 0
+                        last_progress = -1
+                        progress_message = await bot.send_message(chat_id=user_id, text=f'Выполняется скачивание базы данных: 0%',
+                                               reply_markup=keyboard_back)
+                        async for chunk in response.content.iter_chunked(5000000):
+                            file.write(chunk)
+                            downloaded_size += len(chunk)
+                            progress = min(100, int(downloaded_size / total_size * 100))
+                            if progress - last_progress >= 6:
+                                last_progress = progress
+                                await bot.edit_message_text(chat_id=user_id, message_id=progress_message.message_id,
+                                    text=f"⏳ Выполняется скачивание базы данных: {progress}%")
                     with tarfile.open('database.tar.gz', 'r:gz') as archive:
                         with tempfile.TemporaryDirectory() as temp_dir:
                             target_file = None
@@ -33,7 +45,7 @@ async def download_database(user_id):
                                 shutil.copy2(target_file, destination_path)
                                 archive.close()
                                 os.remove('database.tar.gz')
-                                await bot.send_message(chat_id=user_id, text=msg['db_updated'])
+                                await bot.edit_message_text(chat_id=user_id, message_id=progress_message.message_id, text=msg['db_updated'])
                                 logging.info(f"Файл {database_filename} успешно обновлен.")
                             else:
                                 logging.error(f"Файл {database_filename} не найден в архиве.")
