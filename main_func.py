@@ -10,7 +10,7 @@ from itertools import chain
 from functools import wraps
 from capitals import capitals
 from messages import msg
-from keyboards import keyboard_copy, keyboard_back
+from keyboards import keyboard_copy
 from config import pattern, database_filename, user_loggers, user_states, user_data, user_ips
 from aiogram.types import Message, CallbackQuery, ContentType
 
@@ -74,7 +74,7 @@ async def process_check(user_state_key, message, user_id, target_flag):
         if result:
             if result == 'invalid iso':
                 user_states[user_id] = user_state_key
-                return await message.answer(msg['invalid_iso'], parse_mode="HTML", reply_markup=keyboard_back)
+                return await message.answer(msg['invalid_iso'], parse_mode="HTML")
             elif isinstance(result, list):
                 if target_flag:  # Сохраняем данные только для awaiting_target_check
                     user_data[user_id] = result_copy
@@ -138,7 +138,7 @@ async def get_ip_info(text_input: str, target_flag: bool):
                             for ip_addresses in v2:
                                 result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
     if valid_target and not result_copy:
-        result_copy = 'empty'
+        result_copy = 'ips not found'
     return result, result_copy
 
 # функция добавления городов с IP-адресами в результирующие списки

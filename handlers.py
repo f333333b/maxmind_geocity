@@ -1,7 +1,7 @@
 from aiogram.filters import CommandStart, Command
 from aiogram.types import Message, CallbackQuery, ContentType
 from aiogram import Router
-from keyboards import keyboard_back, keyboard_main
+from keyboards import keyboard_main
 from db_updating import is_update_needed
 from main_func import process_check, process_target_output, filter_ips_input, filter_ips_list, filter_by_octet, log_interaction
 from config import user_states
@@ -14,13 +14,14 @@ router = Router()
 @router.message(lambda message: message.content_type != ContentType.TEXT)
 @log_interaction
 async def handle_unsupported_content(message: Message):
-    return await message.answer(msg['invalid_input'], reply_markup=keyboard_back)
+    return await message.answer(msg['invalid_input'])
 
 # обработка команды /start
 @router.message(CommandStart())
 @log_interaction
 async def command_start_handler(message: Message):
-    return await message.answer(msg['start'], reply_markup=keyboard_main)
+    return await message.answer('Здравствуйте! ' + msg['start'], reply_markup=keyboard_main)
+    user_state[user_id] = 'start'
 
 # обработка команды /help
 @router.message(Command("help"))
@@ -69,7 +70,7 @@ async def handle_callback(query: CallbackQuery):
         formatted_ips, error_message = await process_target_output(user_id)
         user_states[user_id] = 'awaiting_target_check'
         text = error_message or formatted_ips
-        return await query.message.answer(text=text, parse_mode="HTML", reply_markup=keyboard_back)
+        return await query.message.answer(text=text, parse_mode="HTML")
 
 # обработка сообщений
 @router.message()
@@ -87,8 +88,12 @@ async def handle_text(message: Message):
     if message.text.startswith('/') and not any(message.text == command.command for command in commands):
         return await message.answer(msg['invalid_command'])
 
+    # стандартное состояние ('start')
+    if user_state == 'start':
+        return await message.answer(msg['start'], reply_markup=keyboard_main)
+
     # сценарий № 1: определение геолокации IP-адресов с фильтрацией по стране
-    if user_state == 'awaiting_target_check':
+    elif user_state == 'awaiting_target_check':
         await process_check('awaiting_target_check', message, user_id, target_flag=True)
 
     # сценарий # 2: определение геолокации IP-адресов

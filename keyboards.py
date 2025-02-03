@@ -14,13 +14,5 @@ keyboard_main = ReplyKeyboardMarkup(
 )
 
 keyboard_copy = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="Отфильтровать IP-адреса по указанной стране", callback_data="copy_ips")]
-    ]
-)
-
-keyboard_back = InlineKeyboardMarkup(
-    inline_keyboard=[
-        [InlineKeyboardButton(text="Назад", callback_data="back_to_choice")]
-    ]
+    inline_keyboard=[[InlineKeyboardButton(text="Отфильтровать IP-адреса по указанной стране", callback_data="copy_ips")]]
 )

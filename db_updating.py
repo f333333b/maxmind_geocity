@@ -6,12 +6,11 @@ import tempfile
 import logging
 from config import database_filename, url, bot, user_states
 from datetime import datetime, timedelta
-from keyboards import keyboard_back
 from messages import msg
 
 # функция для обновления базы
 async def download_database(user_id):
-    updating_db = await bot.send_message(chat_id=user_id, text=msg['db_updating'])
+    await bot.send_message(chat_id=user_id, text=msg['db_updating'])
     user_states[user_id] = 'awaiting_database_update'
     async with aiohttp.ClientSession() as session:
         try:
@@ -21,8 +20,7 @@ async def download_database(user_id):
                         total_size = int(response.headers.get('content-length', 0))
                         downloaded_size = 0
                         last_progress = -1
-                        progress_message = await bot.send_message(chat_id=user_id, text=f'Выполняется скачивание базы данных: 0%',
-                                               reply_markup=keyboard_back)
+                        progress_message = await bot.send_message(chat_id=user_id, text=f'Выполняется скачивание базы данных: 0%')
                         async for chunk in response.content.iter_chunked(5000000):
                             file.write(chunk)
                             downloaded_size += len(chunk)
@@ -49,15 +47,13 @@ async def download_database(user_id):
                                 logging.info(f"Файл {database_filename} успешно обновлен.")
                             else:
                                 logging.error(f"Файл {database_filename} не найден в архиве.")
-                                await bot.send_message(chat_id=user_id, text=msg['db_update_error'],
-                                                       reply_markup=keyboard_back)
+                                await bot.send_message(chat_id=user_id, text=msg['db_update_error'])
                 else:
-                    await bot.send_message(chat_id=user_id, text=msg['db_update_error'],
-                                           reply_markup=keyboard_back)
+                    await bot.send_message(chat_id=user_id, text=msg['db_update_error'])
                     logging.error(f"Ошибка при скачивании базы данных: {response.status}")
         except Exception as e:
             logging.error(f"Ошибка при загрузке файла: {e}")
-            await bot.send_message(chat_id=user_id, text=msg['db_update_error'], reply_markup=keyboard_back)
+            await bot.send_message(chat_id=user_id, text=msg['db_update_error'])
     user_states[user_id] = 'back_to_choice'
 
 # функция проверки наличия базы и ее актуальности
