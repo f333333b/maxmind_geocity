@@ -19,7 +19,7 @@ async def setup_user_logger(user_id):
     if user_id in user_loggers:
         user_loggers[user_id]
 
-    log_filename = f"logs/{user_id}.log"
+    log_filename = "logs/{}.log".format(user_id)
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
     logger = logging.getLogger(str(user_id))
 
@@ -45,20 +45,20 @@ def log_interaction(func):
         if isinstance(event, Message):
             if event.content_type == ContentType.TEXT:
                 text = event.text
-                logger.info(f"Пользователь ({user_id}) отправил сообщение:\n{text}")
+                logger.info("Пользователь (%s) отправил сообщение:\n%s", user_id, text)
             else:
-                logger.info(f"Пользователь ({user_id}) отправил неподдерживаемый формат контента:\n{event.content_type}")
+                logger.info("Пользователь (%s) отправил неподдерживаемый формат контента:\n%s", user_id, event.content_type)
         elif isinstance(event, CallbackQuery):
             data = event.data
-            logger.info(f"Пользователь ({user_id}) нажал кнопку:\n{data}")
+            logger.info("Пользователь (%s) нажал кнопку:\n%s", user_id, data)
         bot_response = await func(event, *args, **kwargs)
         if bot_response:
             if isinstance(bot_response, Message):
-                logger.info(f"Ответ бота:\n{bot_response.text if bot_response.text else 'Текст отсутствует'}")
+                logger.info("Ответ бота:\n%s", bot_response.text if bot_response.text else "Текст отсутствует")
             elif isinstance(bot_response, CallbackQuery):
-                logger.info(f"Ответ бота:\n{bot_response.data}")
+                logger.info("Ответ бота:\n%s", bot_response.data)
             else:
-                logger.info(f"Ответ бота:\n{str(bot_response)}")
+                logger.info("Ответ бота:\n%s", str(bot_response))
         else:
             logger.info("Ответ бота:\nпусто")
         return bot_response
@@ -82,9 +82,9 @@ async def process_check(user_state_key, message, user_id, target_flag):
             return await message.answer(msg['no_ips'], parse_mode="HTML" if target_flag else None)
     except Exception as e:
         user_states[user_id] = user_state_key
-        logging.error(f"{msg['program_error']}: {e}.\nТекст запроса: {message.text}")
+        logging.error("%s: %s.\nТекст запроса: %s", msg['program_error'], e, message.text)
         logging.error(traceback.format_exc())
-        return await message.answer(f"{msg['program_error']}: {e}.")
+        return await message.answer("%s: %s.", msg['program_error'], e)
 
 # функция вывода отфильтрованных по стране IP-адресов
 async def process_target_output(result_copy):
@@ -196,7 +196,7 @@ async def filter_ips_input(first_list, user_id, list_flag):
             user_states[user_id] = 'awaiting_filter_by_octet'
             return msg['enter_octet']
     except Exception as e:
-        logging.error(f"{msg['program_error']}: {e}.\nТекст запроса: {first_list}")
+        logging.error("%s: %s.\nТекст запроса: %s", msg['program_error'], e, first_list)
         logging.error(traceback.format_exc())
         return msg['program_error']
 
@@ -219,10 +219,10 @@ async def filter_by_octet(target_octet, user_id):
     try:
         target_octet = int(target_octet)
     except ValueError:
-        logging.error(f"Неверно введенный октет: {target_octet}")
+        logging.error("Неверно введенный октет: %s", target_octet)
         return msg['invalid_octet']
     if not 0 < target_octet < 256:
-        logging.error(f"Октет вне допустимого диапазона: {target_octet}")
+        logging.error("Октет вне допустимого диапазона: %s", target_octet)
         return msg['invalid_octet']
     first_list = user_ips[user_id]['first']
     found_ips = re.findall(pattern, first_list)
@@ -234,7 +234,7 @@ async def filter_by_octet(target_octet, user_id):
         user_states[user_id] = 'awaiting_filter_octet_list'
         return "Отфильтрованные IP-адреса:\n<code>" + "</code>\n<code>".join(result) + "</code>"
     except Exception as e:
-        logging.error(f"Ошибка при фильтрации IP-адресов: {e}.\nТекст запроса: {first_list}")
+        logging.error("Ошибка при фильтрации IP-адресов: %s.\nТекст запроса: %s", e, first_list)
         logging.error(traceback.format_exc())
         user_states[user_id] = 'awaiting_filter_by_octet'
         return msg['filter_error']

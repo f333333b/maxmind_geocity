@@ -44,15 +44,15 @@ async def download_database(user_id):
                                 archive.close()
                                 os.remove('database.tar.gz')
                                 await bot.edit_message_text(chat_id=user_id, message_id=progress_message.message_id, text=msg['db_updated'])
-                                logging.info(f"Файл {database_filename} успешно обновлен.")
+                                logging.info("Файл %s успешно обновлен.", database_filename)
                             else:
-                                logging.error(f"Файл {database_filename} не найден в архиве.")
+                                logging.error("Файл %s не найден в архиве.", database_filename)
                                 await bot.send_message(chat_id=user_id, text=msg['db_update_error'])
                 else:
                     await bot.send_message(chat_id=user_id, text=msg['db_update_error'])
-                    logging.error(f"Ошибка при скачивании базы данных: {response.status}")
+                    logging.error("Ошибка при скачивании базы данных: %s", response.status)
         except Exception as e:
-            logging.error(f"Ошибка при загрузке файла: {e}")
+            logging.error("Ошибка при загрузке файла: %s", e)
             await bot.send_message(chat_id=user_id, text=msg['db_update_error'])
     user_states[user_id] = 'back_to_choice'
 
