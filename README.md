@@ -273,7 +273,7 @@ BOT_TOKEN=токен_бота
 LICENSE_KEY=ключ_для_GeoLite2
 ```
 
-### Запустите бота:
+### Запуск бота:
 ```bash
 python main.py
 ```
