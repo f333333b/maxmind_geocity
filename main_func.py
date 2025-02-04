@@ -184,7 +184,7 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
                 line.replace(match, f"<b><code>{ip_original}</code></b>"))
 
 # функция получения списка IP-адресов для фильтрации
-async def filter_ips_input(first_list, user_id, list_flag):
+async def filter_ips_input(first_list, list_flag):
     if not re.findall(pattern, first_list):
         return msg['no_ips']
     try:
