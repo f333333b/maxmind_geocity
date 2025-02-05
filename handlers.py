@@ -1,5 +1,6 @@
 from aiogram.types import Message, CallbackQuery, ContentType
 from aiogram import Router
+from config import trusted_users
 from keyboards import keyboard_main
 from main_func import process_check, filter_ips_input, filter_ips_list, filter_by_octet, log_interaction
 from commands import commands
@@ -23,7 +24,7 @@ class UserState(StatesGroup):
     AWAITING_FILTER_OCTET_FIRST = State()
     AWAITING_FILTER_OCTET_SECOND = State()
     AWAITING_DATABASE_UPDATE = State()
-    COPY_IPS = State() # callback-хендлер
+    COPY_IPS = State()
 
 router = Router()
 
@@ -44,7 +45,11 @@ async def handle_unsupported_command_handler(message: Message):
 @log_interaction
 async def command_start_handler(message: Message):
     """Обработка команды /start"""
-    return await message.answer('Здравствуйте! ' + msg['start'], reply_markup=keyboard_main)
+    user_id = message.from_user.id
+    if user_id in trusted_users:
+        return await message.answer('Здравствуйте! Вы авторизованы. ' + msg['start'], reply_markup=keyboard_main)
+    else:
+        return await message.answer(msg['no_access'])
 
 @router.message(UserState.HELP)
 @log_interaction
