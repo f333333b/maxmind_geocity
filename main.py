@@ -4,9 +4,10 @@ from config import bot
 from aiogram import Dispatcher
 from handlers import router
 from commands import commands
+from aiogram.fsm.storage.memory import MemoryStorage
 
 # основной код
-dp = Dispatcher()
+dp = Dispatcher(storage=MemoryStorage())
 dp.include_router(router)
 
 logging.basicConfig(level=logging.INFO)

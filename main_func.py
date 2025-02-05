@@ -11,11 +11,13 @@ from functools import wraps
 from capitals import capitals
 from messages import msg
 from keyboards import keyboard_copy
-from config import pattern, database_filename, user_loggers, user_states, user_data, user_ips
+from states import UserState
+from aiogram.fsm.context import FSMContext
+from config import pattern, database_filename, user_loggers, user_data, user_ips
 from aiogram.types import Message, CallbackQuery, ContentType
 
-# функция запуска логирования
 async def setup_user_logger(user_id):
+    """Функция запуска логирования"""
     if user_id in user_loggers:
         user_loggers[user_id]
 
@@ -36,8 +38,8 @@ async def setup_user_logger(user_id):
     user_loggers[user_id] = logger
     return logger
 
-# функция декоратор для логирования сообщений
 def log_interaction(func):
+    """Функция-декоратор для логирования сообщений"""
     @wraps(func)
     async def wrapper(event, *args, **kwargs):
         user_id = event.from_user.id
@@ -64,16 +66,16 @@ def log_interaction(func):
         return bot_response
     return wrapper
 
-# функция определения геолокации IP-адресов
-async def process_check(user_state_key, message, user_id, target_flag):
+async def process_check(message, user_id, target_flag):
+    """Функция определения геолокации IP-адресов"""
     try:
         result, result_copy = await get_ip_info(message.text, target_flag=target_flag)
         if result:
             if result == 'invalid iso':
-                user_states[user_id] = user_state_key
+                #await state.set_state(UserState.ЖЕЛАЕМОЕ_СОСТОЯНИЕ)
                 return await message.answer(msg['invalid_iso'], parse_mode="HTML")
             elif isinstance(result, list):
-                if target_flag:  # Сохраняем данные только для awaiting_target_check
+                if target_flag:
                     user_data[user_id] = result_copy
                 return await message.answer('\n'.join(str(item) for item in result), parse_mode="HTML", reply_markup=keyboard_copy if target_flag else None)
             else:
@@ -81,13 +83,13 @@ async def process_check(user_state_key, message, user_id, target_flag):
         else:
             return await message.answer(msg['no_ips'], parse_mode="HTML" if target_flag else None)
     except Exception as e:
-        user_states[user_id] = user_state_key
+        # user_states[user_id] = user_state_key
         logging.error("%s: %s.\nТекст запроса: %s", msg['program_error'], e, message.text)
         logging.error(traceback.format_exc())
         return await message.answer("%s: %s.", msg['program_error'], e)
 
-# функция вывода отфильтрованных по стране IP-адресов
-async def process_target_output(result_copy):
+async def process_target_copy(result_copy):
+    """Функция вывода отфильтрованных по стране IP-адресов"""
     if not result_copy or result_copy == 'ips not found':
         return None, msg['no_ips_to_copy']
     else:
@@ -98,8 +100,29 @@ async def process_target_output(result_copy):
                 item if isinstance(item, list) else [item] for item in result_copy))
             return "\n".join(flat_ips)
 
-# функция для обработки текста и получения IP-адресов
+    user_id = query.message.from_user.id
+    result_copy = user_data.get(user_id, [])
+    if not result_copy:
+        return await query.message.answer(msg['no_ips_to_copy'], reply_markup=keyboard_back)
+    elif result_copy == 'ips not found':
+        return await query.message.answer(msg['no_ips_to_copy'], reply_markup=keyboard_back)
+    elif result_copy == 'empty':
+        user_states[user_id] = 'awaiting_target_check'
+        return await query.message.answer(msg['no_ips_to_copy'], parse_mode="HTML", reply_markup=keyboard_back)
+    else:
+        if all(isinstance(item, str) for item in result_copy):
+            # отправляем список IP-адресов пользователю
+            formatted_ips = "\n".join(result_copy)
+            return await query.message.answer(formatted_ips, parse_mode="HTML", reply_markup=keyboard_back)
+        else:
+            flat_ips = list(chain.from_iterable(
+                item if isinstance(item, list) else [item] for item in result_copy))
+            formatted_ips = "\n".join(flat_ips)
+            return await query.message.answer(formatted_ips, parse_mode="HTML", reply_markup=keyboard_back)
+    user_states[user_id] = 'awaiting_target_check'
+
 async def get_ip_info(text_input: str, target_flag: bool):
+    """Функция для обработки текста и получения IP-адресов"""
     all_ips = re.findall(pattern, text_input)
     ip_list_text = text_input.splitlines()
     new_text_dict, result_copy = {}, []
@@ -124,21 +147,25 @@ async def get_ip_info(text_input: str, target_flag: bool):
                     for match_instance in match:
                         await make_cities_dict(match_instance, city_file, new_text_dict, target_flag,
                                                    target_country_iso, result_copy, line)
-            for ISO, v in new_text_dict.items():
-                for country_dictionary, dictionary_content in v.items():
-                    if isinstance(dictionary_content, str):
-                        result.append(dictionary_content)
-                    elif isinstance(dictionary_content, dict):
-                        for city_name, v2 in dictionary_content.items():
-                            result.append(city_name)
-                            for ip_addresses in v2:
-                                result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
+            await get_ip_info_result(new_text_dict, result)
     if valid_target and not result_copy:
         result_copy = 'ips not found'
     return result, result_copy
 
-# функция добавления городов с IP-адресами в результирующие списки
+async def get_ip_info_result(new_text_dict, result):
+    """Функция перевода результата get_ip_info в список"""
+    for ISO, v in new_text_dict.items():
+        for country_dictionary, dictionary_content in v.items():
+            if isinstance(dictionary_content, str):
+                result.append(dictionary_content)
+            elif isinstance(dictionary_content, dict):
+                for city_name, v2 in dictionary_content.items():
+                    result.append(city_name)
+                    for ip_addresses in v2:
+                        result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
+
 async def add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city, target_flag=False):
+    """Функция добавления городов с IP-адресами в результирующие списки"""
     if city not in new_text_dict[country_id]['cities']:
         new_text_dict[country_id]['cities'][city] = []
     if line.replace(match, f"<code>{ip_original}</code>") not in new_text_dict[country_id]['cities'][city]:
@@ -147,8 +174,8 @@ async def add_cities(new_text_dict, ip_original, result_copy, line, match, count
     if target_flag:
         result_copy.append(line.replace(ip_original, f"<code>{ip_original}</code>"))
 
-# функция создания словаря с городами
 async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_country_iso, result_copy, line):
+    """Функция создания словаря с городами"""
     ip_original = match
     if match.count('.') == 2:
         ip = ip_original + '.0'
@@ -172,7 +199,6 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
             await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
         else:
             await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
-    # когда IP-адрес не найден в базе данных
     except:
         if 'Unknown' not in new_text_dict:
             new_text_dict['Unknown'] = {}
@@ -183,39 +209,39 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
             new_text_dict['Unknown']['cities']['\n❌Invalid IP'].append(
                 line.replace(match, f"<b><code>{ip_original}</code></b>"))
 
-# функция получения списка IP-адресов для фильтрации
-async def filter_ips_input(first_list, list_flag):
+async def filter_ips_input(first_list, user_id, list_flag, state: FSMContext):
+    """Функция получения списка IP-адресов для фильтрации"""
     if not re.findall(pattern, first_list):
         return msg['no_ips']
     try:
         user_ips[user_id] = {'first': first_list}
         if list_flag:
-            user_states[user_id] = 'awaiting_filter_second_input'
+            await state.set_state(UserState.AWAITING_FILTER_LIST_SECOND)
             return msg['filter_ips_second']
         else:
-            user_states[user_id] = 'awaiting_filter_by_octet'
+            await state.set_state(UserState.AWAITING_FILTER_OCTET_SECOND)
             return msg['enter_octet']
     except Exception as e:
         logging.error("%s: %s.\nТекст запроса: %s", msg['program_error'], e, first_list)
         logging.error(traceback.format_exc())
         return msg['program_error']
 
-# функция фильтрации списка IP-адресов по второму списку
-async def filter_ips_list(second_list, user_id):
+async def filter_ips_list(second_list, user_id, state: FSMContext):
+    """Функция фильтрации списка IP-адресов по второму списку"""
     if not re.findall(pattern, second_list):
         return msg['no_ips_second']
     else:
         first_list = re.findall(pattern, user_ips[user_id]['first'])
         second_list = re.findall(pattern, second_list)
         result = list(dict.fromkeys([ip for ip in first_list if ip not in second_list]))
-        user_states[user_id] = 'awaiting_filter_first_input'
+        await state.set_state(UserState.AWAITING_FILTER_LIST_FIRST)
         if result:
             return "Отфильтрованные IP-адреса:\n<code>" + "</code>\n<code>".join(result) + "</code>"
         else:
             return msg['no_filtered_ips']
 
-# функция фильтрации по октету
-async def filter_by_octet(target_octet, user_id):
+async def filter_by_octet(target_octet, user_id, state: FSMContext):
+    """Функция фильтрации по октету"""
     try:
         target_octet = int(target_octet)
     except ValueError:
@@ -228,13 +254,11 @@ async def filter_by_octet(target_octet, user_id):
     found_ips = re.findall(pattern, first_list)
     try:
         result = list(dict.fromkeys([ip for ip in found_ips if ip.split('.')[0] != str(target_octet)]))
+        await state.set_state(UserState.AWAITING_FILTER_OCTET_FIRST)
         if not result:
-            user_states[user_id] = 'awaiting_filter_octet_list'
             return msg['no_filtered_ips']
-        user_states[user_id] = 'awaiting_filter_octet_list'
         return "Отфильтрованные IP-адреса:\n<code>" + "</code>\n<code>".join(result) + "</code>"
     except Exception as e:
         logging.error("Ошибка при фильтрации IP-адресов: %s.\nТекст запроса: %s", e, first_list)
         logging.error(traceback.format_exc())
-        user_states[user_id] = 'awaiting_filter_by_octet'
         return msg['filter_error']

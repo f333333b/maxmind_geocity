@@ -4,14 +4,15 @@ import tarfile
 import shutil
 import tempfile
 import logging
-from config import database_filename, url, bot, user_states
+from states import UserState
+from aiogram.fsm.context import FSMContext
+from config import database_filename, url, bot
 from datetime import datetime, timedelta
 from messages import msg
 
-# функция для обновления базы
-async def download_database(user_id):
+async def download_database(user_id, state: FSMContext):
+    """Функция обновления базы данных"""
     await bot.send_message(chat_id=user_id, text=msg['db_updating'])
-    user_states[user_id] = 'awaiting_database_update'
     async with aiohttp.ClientSession() as session:
         try:
             async with session.get(url) as response:
@@ -54,10 +55,10 @@ async def download_database(user_id):
         except Exception as e:
             logging.error("Ошибка при загрузке файла: %s", e)
             await bot.send_message(chat_id=user_id, text=msg['db_update_error'])
-    user_states[user_id] = 'back_to_choice'
+    await state.set_state(UserState.START)
 
-# функция проверки наличия базы и ее актуальности
 async def is_update_needed(user_id):
+    """Функция проверки наличия базы и ее актуальности"""
     if not os.path.exists(database_filename):
         await download_database(user_id)
     else:
