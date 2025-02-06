@@ -15,7 +15,7 @@ router = Router()
 
 @router.message(StateFilter(None))
 @log_interaction
-async def unsupported_content_handler(message: Message, state: FSMContext):
+async def default_state_handler(message: Message, state: FSMContext):
     """Обработка стандартного состояния"""
     user_id = message.from_user.id
     if user_id in trusted_users:
@@ -80,7 +80,7 @@ async def command_filter_octet_handler(message: Message, state: FSMContext):
 
 @router.message(UserState.START)
 @log_interaction
-async def command_start_handler(message: Message, state: FSMContext):
+async def state_start_handler(message: Message):
     """Обработка состояния START"""
     return await message.answer(msg['start'], reply_markup=keyboard_main)
 
@@ -108,7 +108,7 @@ async def copy_ips_callback_handler(query: CallbackQuery):
 @router.message(UserState.AWAITING_FILTER_LIST_FIRST)
 @log_interaction
 async def process_filter_list_first_handler(message: Message, state: FSMContext):
-    """Обработка первого списка в /filter"""
+    """Обработка ввода первого списка в /filter"""
     user_id = message.from_user.id
     await state.set_state(UserState.AWAITING_FILTER_LIST_SECOND)
     return await message.answer(text=await filter_ips_input(message.text, user_id, list_flag=True, state=state), parse_mode="HTML")
@@ -116,14 +116,14 @@ async def process_filter_list_first_handler(message: Message, state: FSMContext)
 @router.message(UserState.AWAITING_FILTER_LIST_SECOND)
 @log_interaction
 async def process_filter_list_second_handler(message: Message, state: FSMContext):
-    """Обработка второго списка в /filter"""
+    """Обработка ввода второго списка в /filter"""
     user_id = message.from_user.id
     return await message.answer(text=await filter_ips_list(message.text, user_id, state=state), parse_mode="HTML")
 
 @router.message(UserState.AWAITING_FILTER_OCTET_FIRST)
 @log_interaction
 async def process_filter_octet_first_handler(message: Message, state: FSMContext):
-    """Обработка списка в /filter_octet"""
+    """Обработка ввода списка в /filter_octet"""
     await state.set_state(UserState.AWAITING_FILTER_OCTET_SECOND)
     user_id = message.from_user.id
     return await message.answer(text=await filter_ips_input(message.text, user_id, list_flag=False, state=state), parse_mode="HTML")
@@ -131,7 +131,7 @@ async def process_filter_octet_first_handler(message: Message, state: FSMContext
 @router.message(UserState.AWAITING_FILTER_OCTET_SECOND)
 @log_interaction
 async def process_filter_octet_second_handler(message: Message, state: FSMContext):
-    """Обработка октета в /filter_octet"""
+    """Обработка ввода октета в /filter_octet"""
     user_id = message.from_user.id
     return await message.answer(text=await filter_by_octet(message.text, user_id, state=state), parse_mode="HTML")
 

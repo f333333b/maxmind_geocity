@@ -129,5 +129,5 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
                 new_text_dict['Unknown']['cities'] = {}
                 if '\n❌Invalid IP' not in new_text_dict['Unknown']['cities']:
                     new_text_dict['Unknown']['cities']['\n❌Invalid IP'] = []
-            new_text_dict['Unknown']['cities']['\n❌Invalid IP'].append(
+        new_text_dict['Unknown']['cities']['\n❌Invalid IP'].append(
                 line.replace(match, f"<b><code>{ip_original}</code></b>"))

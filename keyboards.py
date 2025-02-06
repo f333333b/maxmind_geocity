@@ -1,6 +1,6 @@
 from aiogram.types import InlineKeyboardMarkup, InlineKeyboardButton, ReplyKeyboardMarkup, KeyboardButton
 
-# постоянная клавиатура
+# основная клавиатура
 keyboard_main = ReplyKeyboardMarkup(
     keyboard=[
         [KeyboardButton(text="/check"),
