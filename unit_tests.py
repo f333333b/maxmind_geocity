@@ -1,6 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch
-from main_func import process_check
+from filter_utils import filter_by_octet
 
 # download_database - наличие файла в папке с определенной датой?
 # process_target_output
