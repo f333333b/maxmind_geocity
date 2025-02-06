@@ -4,10 +4,9 @@ from config import bot
 from aiogram import Dispatcher
 from handlers import router
 from commands import commands
-from capitals import capitals
-from db_updating import update_check
+from db_updating import update_check, download_database
 from aiogram.fsm.storage.memory import MemoryStorage
-from db_capitals_utils import check_db_connection, init_db_pool, insert_capitals
+from db_capitals_utils import check_db_connection, init_db_pool
 
 # основной код
 dp = Dispatcher(storage=MemoryStorage())
@@ -25,7 +24,6 @@ async def main():
     asyncio.create_task(update_check())
     await init_db_pool()
     await check_db_connection()
-    #await insert_capitals(capitals)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
