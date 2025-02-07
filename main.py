@@ -25,7 +25,7 @@ async def main():
     asyncio.create_task(update_check())
     await init_db_pool()
     await check_db_connection()
-    await insert_capitals(capitals)
+    #await insert_capitals(capitals)
     await dp.start_polling(bot)
 
 if __name__ == "__main__":

@@ -8,6 +8,7 @@ import traceback
 from itertools import chain
 from messages import msg
 from keyboards import keyboard_copy
+from capitals import capitals
 from db_capitals_utils import get_capital
 from config import pattern, database_filename, user_data
 
@@ -111,7 +112,9 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
         country_en = response.country.names.get('en', '')
         city = response.city.names.get('ru', '')
         if not city:
-            city = await get_capital(country_en)
+            city = capitals[country_en]
+            #city = await get_capital(country_en)
+            print(city)
         flag = countryflag.getflag([country_id])
         if country_id not in new_text_dict:
             new_text_dict[country_id] = {'head': f'\n{flag} {country_id} ({country_ru})', 'cities': {}}
