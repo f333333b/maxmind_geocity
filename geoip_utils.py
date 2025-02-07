@@ -112,9 +112,7 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
         country_en = response.country.names.get('en', '')
         city = response.city.names.get('ru', '')
         if not city:
-            city = capitals[country_en]
-            #city = await get_capital(country_en)
-            print(city)
+            city = await get_capital(country_en)
         flag = countryflag.getflag([country_id])
         if country_id not in new_text_dict:
             new_text_dict[country_id] = {'head': f'\n{flag} {country_id} ({country_ru})', 'cities': {}}

@@ -3,13 +3,15 @@ import asyncpg
 async def get_capital(country_en):
     """Функция обращения к базе данных для получения столицы страны"""
     async with db_pool.acquire() as conn:
-        result = await conn.fetch(
-        """
-        SELECT capital FROM capitals
-        WHERE country = %1
-        """, country_en)
-        print(result)
-        return result
+        result = await conn.fetchrow(
+            """
+            SELECT capital FROM capitals
+            WHERE country = $1
+            """, country_en)
+        if result:
+            return result['capital']
+        else:
+            return "Неизвестно"
 
 async def init_db_pool():
     """Создание пула соединений для работы с базой данных"""
