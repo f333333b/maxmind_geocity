@@ -8,6 +8,7 @@ async def get_capital(country_en):
             SELECT capital FROM capitals
             WHERE country = $1
             """, country_en)
+        print(result)
         if result:
             return result['capital']
         else:

@@ -12,8 +12,10 @@ from email.utils import parsedate_to_datetime
 async def download_database():
     """Функция обновления базы данных"""
     async with aiohttp.ClientSession() as session:
+        print('aiohttp.ClientSession() as session TEST_CALLED')
         try:
             async with session.get(url) as response:
+                print('session.get(url) as response TEST_CALLED')
                 if response.status == 200:
                     logging.info("Загрузка базы данных успешна (%s)", response.status)
                     async with aiofiles.open('database.tar.gz', 'wb') as file:
