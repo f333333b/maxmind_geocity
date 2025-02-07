@@ -14,7 +14,6 @@ async def init_db_pool():
     global db_pool
     db_pool = await asyncpg.create_pool(
         user='postgres',
-        password='1',
         database='postgres',
         host='localhost',
         port='5432'
