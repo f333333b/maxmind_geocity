@@ -1,4 +1,5 @@
 import asyncpg
+from capitals import capitals
 
 async def get_capital(country_en):
     async with db_pool.acquire() as conn:
@@ -9,7 +10,7 @@ async def get_capital(country_en):
         """, country_en)
 
 async def init_db_pool():
-    """Создание пула соединений для работы с БД."""
+    """Создание пула соединений для работы с БД"""
     global db_pool
     db_pool = await asyncpg.create_pool(
         user='postgres',
@@ -21,9 +22,7 @@ async def init_db_pool():
 
 async def check_db_connection():
     try:
-        # Используем пул для получения соединения
         async with db_pool.acquire() as conn:
-            # Простой запрос для проверки соединения
             result = await conn.fetch("SELECT 1")
             if result:
                 print("Соединение с базой данных установлено!")
@@ -33,7 +32,6 @@ async def check_db_connection():
 async def insert_capitals(capitals):
     try:
         async with db_pool.acquire() as conn:
-            # Пример запроса на вставку данных
             for country, capital in capitals.items():
                 await conn.execute(
                     "INSERT INTO capitals (country_name, capital_name) VALUES ($1, $2)",
@@ -42,3 +40,8 @@ async def insert_capitals(capitals):
             print("Данные успешно внесены в таблицу.")
     except Exception as e:
         print(f"Ошибка при внесении данных: {e}")
+
+async def main():
+    await init_db_pool()
+    await check_db_connection()
+    await insert_capitals(capitals)
