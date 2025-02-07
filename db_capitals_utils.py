@@ -5,8 +5,8 @@ async def get_capital(country_en):
     async with db_pool.acquire() as conn:
         return await conn.fetch(
         """
-        SELECT capital_name FROM capitals
-        WHERE country_name = %1
+        SELECT capital FROM capitals
+        WHERE country = %1
         """, country_en)
 
 async def init_db_pool():
@@ -34,7 +34,7 @@ async def insert_capitals(capitals):
         async with db_pool.acquire() as conn:
             for country, capital in capitals.items():
                 await conn.execute(
-                    "INSERT INTO capitals (country_name, capital_name) VALUES ($1, $2)",
+                    "INSERT INTO capitals (country, capital) VALUES ($1, $2)",
                     country, capital
                 )
             print("Данные успешно внесены в таблицу.")
