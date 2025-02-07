@@ -57,7 +57,7 @@ async def update_check():
                     async with session.head(url) as response:
                         last_modified = response.headers.get("Last-Modified")
                         if last_modified:
-                            updated_base_date = parsedate_to_datetime(last_modified)
+                            updated_base_date = parsedate_to_datetime(last_modified).replace(tzinfo=None)
                             if updated_base_date - existing_base_date > timedelta(weeks=1):
                                 await download_database()
                 except (aiohttp.ClientError, ValueError) as e:

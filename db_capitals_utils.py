@@ -40,8 +40,3 @@ async def insert_capitals(capitals):
             print("Данные успешно внесены в таблицу.")
     except Exception as e:
         print(f"Ошибка при внесении данных: {e}")
-
-async def main():
-    await init_db_pool()
-    await check_db_connection()
-    await insert_capitals(capitals)
