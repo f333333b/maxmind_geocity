@@ -28,6 +28,5 @@ async def main():
     await insert_capitals(capitals)
     await dp.start_polling(bot)
 
-
 if __name__ == "__main__":
     asyncio.run(main())
