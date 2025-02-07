@@ -1,5 +1,6 @@
 import os
 import logging
+import pandas
 from functools import wraps
 from config import user_loggers
 from aiogram.types import Message, CallbackQuery, ContentType
@@ -50,3 +51,11 @@ def log_interaction(func):
             logger.info("Ответ бота:\nпусто")
         return bot_response
     return wrapper
+
+def logs_to_db():
+    log_path = r'test_logs'
+    for filename in filter(lambda x: x.endswith('.log'), os.listdir(log_path)):
+        with open(log_path + '/' + filename, 'r') as file:
+            print('success')
+
+logs_to_db()
