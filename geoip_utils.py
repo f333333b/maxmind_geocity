@@ -8,7 +8,6 @@ import traceback
 from itertools import chain
 from messages import msg
 from keyboards import keyboard_copy
-from capitals import capitals
 from db_capitals_utils import get_capital
 from config import pattern, database_filename, user_data
 
