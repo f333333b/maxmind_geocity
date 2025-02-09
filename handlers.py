@@ -1,15 +1,16 @@
-from aiogram import Router, F
-from aiogram.filters import StateFilter, Command
-from aiogram.types import ContentType, Message, CallbackQuery
+from aiogram import F, Router
+from aiogram.filters import Command, StateFilter
 from aiogram.fsm.context import FSMContext
-from messages import msg
+from aiogram.types import CallbackQuery, ContentType, Message
+
 from commands import commands
-from states import UserState
 from config import trusted_users
-from logging_utils import log_interaction
-from keyboards import keyboard_main
+from filter_utils import filter_by_octet, filter_ips_input, filter_ips_list
 from geoip_utils import process_check, process_target_copy
-from filter_utils import filter_ips_input, filter_ips_list, filter_by_octet
+from keyboards import keyboard_main
+from logging_utils import log_interaction
+from messages import msg
+from states import UserState
 
 router = Router()
 

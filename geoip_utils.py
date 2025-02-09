@@ -1,15 +1,17 @@
-import re
-import geoip2.database
-import geoip2.errors
-import countryflag
-import pycountry
 import logging
+import re
 import traceback
 from itertools import chain
-from messages import msg
-from keyboards import keyboard_copy
+
+import countryflag
+import geoip2.database
+import geoip2.errors
+import pycountry
+
+from config import database_filename, pattern, user_data
 from db_capitals_utils import get_capital
-from config import pattern, database_filename, user_data
+from keyboards import keyboard_copy
+from messages import msg
 
 async def process_check(message, user_id, target_flag):
     """Функция определения геолокации IP-адресов"""

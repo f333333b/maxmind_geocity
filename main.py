@@ -1,12 +1,15 @@
 import asyncio
 import logging
-from config import bot
+
 from aiogram import Dispatcher
+from aiogram.fsm.storage.memory import MemoryStorage
+
+from config import bot
 from handlers import router
 from commands import commands
 from capitals import capitals
 from db_updating import update_check
-from aiogram.fsm.storage.memory import MemoryStorage
+from logging_utils import logs_to_db
 from db_capitals_utils import check_db_connection, init_db_pool, insert_capitals
 
 # создание диспатчера с временным хранилищем состояний пользователя
@@ -21,6 +24,9 @@ async def main():
 
     # запуск фонового обновления базы данных
     asyncio.create_task(update_check())
+
+    # запуск фонового внесения информации из логов в базу данных
+    asyncio.create_task(logs_to_db())
 
     # запуск пула к базе данных capitals
     await init_db_pool()

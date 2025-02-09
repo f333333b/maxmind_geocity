@@ -1,8 +1,10 @@
+from unittest.mock import AsyncMock
+
 import pytest
+
 from filter_utils import filter_ips_input, filter_ips_list, filter_by_octet
 from messages import msg
 from states import UserState
-from unittest.mock import AsyncMock
 
 @pytest.mark.parametrize(
     "first_list, list_flag, expected_result, expected_state",

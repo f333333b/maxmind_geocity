@@ -1,5 +1,6 @@
 import pytest
 from unittest.mock import AsyncMock, patch
+
 from geoip_utils import process_check
 
 # is_update_needed

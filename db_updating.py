@@ -1,13 +1,15 @@
+import asyncio
+import logging
 import os
-import aiohttp
 import tarfile
 import tempfile
-import logging
-import asyncio
-import aiofiles
-from config import database_filename, url
 from datetime import datetime, timedelta
 from email.utils import parsedate_to_datetime
+
+import aiofiles
+import aiohttp
+
+from config import database_filename, url
 
 async def download_database():
     """Функция обновления базы данных"""

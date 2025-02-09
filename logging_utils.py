@@ -1,9 +1,9 @@
-import logging
 import os
+import asyncio
+import logging
 from functools import wraps
 from aiogram.types import Message, CallbackQuery, ContentType
 from config import user_loggers
-
 
 async def setup_user_logger(user_id):
     """Функция запуска логирования"""
@@ -51,10 +51,11 @@ def log_interaction(func):
         return bot_response
     return wrapper
 
-def logs_to_db():
-    log_path = r'test_logs'
-    for filename in filter(lambda x: x.endswith('.log'), os.listdir(log_path)):
-        with open(log_path + '/' + filename, 'r') as file:
-            print('test')
-
-logs_to_db()
+async def logs_to_db():
+    one_day_in_seconds = 24 * 60 * 60
+    while True:
+        log_path = r'test_logs'
+        for filename in filter(lambda x: x.endswith('.log'), os.listdir(log_path)):
+            with open(log_path + '/' + filename, 'r') as file:
+                print('test')
+        await asyncio.sleep(one_day_in_seconds)

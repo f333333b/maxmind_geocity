@@ -1,9 +1,11 @@
 import re
 import logging
 import traceback
+
+from aiogram.fsm.context import FSMContext
+
 from messages import msg
 from states import UserState
-from aiogram.fsm.context import FSMContext
 from config import pattern
 
 async def filter_ips_input(first_list, list_flag, state: FSMContext):
