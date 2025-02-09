@@ -109,31 +109,27 @@ async def copy_ips_callback_handler(query: CallbackQuery):
 @log_interaction
 async def process_filter_list_first_handler(message: Message, state: FSMContext):
     """Обработка ввода первого списка в /filter"""
-    user_id = message.from_user.id
     await state.set_state(UserState.AWAITING_FILTER_LIST_SECOND)
-    return await message.answer(text=await filter_ips_input(message.text, user_id, list_flag=True, state=state), parse_mode="HTML")
+    return await message.answer(text=await filter_ips_input(message.text, list_flag=True, state=state), parse_mode="HTML")
 
 @router.message(UserState.AWAITING_FILTER_LIST_SECOND)
 @log_interaction
 async def process_filter_list_second_handler(message: Message, state: FSMContext):
     """Обработка ввода второго списка в /filter"""
-    user_id = message.from_user.id
-    return await message.answer(text=await filter_ips_list(message.text, user_id, state=state), parse_mode="HTML")
+    return await message.answer(text=await filter_ips_list(message.text, state=state), parse_mode="HTML")
 
 @router.message(UserState.AWAITING_FILTER_OCTET_FIRST)
 @log_interaction
 async def process_filter_octet_first_handler(message: Message, state: FSMContext):
     """Обработка ввода списка в /filter_octet"""
     await state.set_state(UserState.AWAITING_FILTER_OCTET_SECOND)
-    user_id = message.from_user.id
-    return await message.answer(text=await filter_ips_input(message.text, user_id, list_flag=False, state=state), parse_mode="HTML")
+    return await message.answer(text=await filter_ips_input(message.text, list_flag=False, state=state), parse_mode="HTML")
 
 @router.message(UserState.AWAITING_FILTER_OCTET_SECOND)
 @log_interaction
 async def process_filter_octet_second_handler(message: Message, state: FSMContext):
     """Обработка ввода октета в /filter_octet"""
-    user_id = message.from_user.id
-    return await message.answer(text=await filter_by_octet(message.text, user_id, state=state), parse_mode="HTML")
+    return await message.answer(text=await filter_by_octet(message.text, state=state), parse_mode="HTML")
 
 def register_handlers(dp):
     dp.include_router(router)

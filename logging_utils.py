@@ -1,9 +1,8 @@
-import os
 import logging
-import pandas
+import os
 from functools import wraps
-from config import user_loggers
 from aiogram.types import Message, CallbackQuery, ContentType
+from config import user_loggers
 
 
 async def setup_user_logger(user_id):
@@ -56,6 +55,6 @@ def logs_to_db():
     log_path = r'test_logs'
     for filename in filter(lambda x: x.endswith('.log'), os.listdir(log_path)):
         with open(log_path + '/' + filename, 'r') as file:
-            print('success')
+            print('test')
 
 logs_to_db()
