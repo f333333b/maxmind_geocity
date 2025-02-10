@@ -6,5 +6,6 @@ commands = [
     BotCommand(command="/target", description="Определение геолокации с фильтрацией по стране"),
     BotCommand(command="/filter", description="Отфильтровать IP-адреса"),
     BotCommand(command="/filter_octet", description="Отфильтровать IP-адреса по первому октету"),
+    BotCommand(command="/shorten", description="Обрезать IP-адреса"),
     BotCommand(command="/help", description="Справка")
 ]

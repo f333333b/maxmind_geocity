@@ -8,18 +8,21 @@ from messages import msg
 from states import UserState
 from config import pattern
 
-async def filter_ips_input(first_list, list_flag, state: FSMContext):
+async def filter_ips_input(first_list, filter_type, state: FSMContext):
     """Функция получения списка IP-адресов для фильтрации"""
     if not re.findall(pattern, first_list):
-        return msg['no_ips']
+        return msg['no_ips'], ''
     try:
         await state.update_data(first_list=first_list)
-        if list_flag:
+        if filter_type == 'filter_by_list':
             await state.set_state(UserState.AWAITING_FILTER_LIST_SECOND)
             return msg['filter_ips_second']
-        else:
+        elif filter_type == 'filter_by_octet':
             await state.set_state(UserState.AWAITING_FILTER_OCTET_SECOND)
             return msg['enter_octet']
+        elif filter_type == 'shorten':
+            await state.set_state(UserState.AWAITING_FILTER_CHOOSE_FILTER)
+            return msg['choose_action']
     except Exception as e:
         logging.error("%s: %s.\nТекст запроса: %s", msg['program_error'], e, first_list)
         logging.error(traceback.format_exc())
@@ -64,3 +67,20 @@ async def filter_by_octet(target_octet, state: FSMContext):
         logging.error("Ошибка при фильтрации IP-адресов: %s.\nТекст запроса: %s", e, first_list)
         logging.error(traceback.format_exc())
         return msg['filter_error']
+
+async def shorten_ips(octet_flag, state: FSMContext):
+    """Функция обрезки 4-го октета IP-адресов"""
+    data = await state.get_data()
+    first_list = data['first_list']
+    found_ips = re.findall(pattern, first_list)
+    if not octet_flag:
+        result = found_ips
+    else:
+        try:
+            result = map(lambda ip: ip[:ip.rfind('.')] if ip.count('.') == 3 else ip, found_ips)
+        except Exception as e:
+            logging.error("Ошибка при фильтрации IP-адресов: %s.\nТекст запроса: %s", e, first_list)
+            logging.error(traceback.format_exc())
+            return "Произошла ошибка при обработке IP-адресов."
+    await state.set_state(UserState.AWAITING_FILTER_SHORTEN_LIST)
+    return "Обработанные IP-адреса:\n<code>" + "</code>\n<code>".join(result) + "</code>"

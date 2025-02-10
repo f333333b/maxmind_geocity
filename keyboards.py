@@ -7,6 +7,7 @@ keyboard_main = ReplyKeyboardMarkup(
         KeyboardButton(text="/target"),
         KeyboardButton(text="/filter"),
         KeyboardButton(text="/filter_octet"),
+        KeyboardButton(text="/shorten"),
         KeyboardButton(text="/help")]
     ],
     resize_keyboard=True,
@@ -15,4 +16,11 @@ keyboard_main = ReplyKeyboardMarkup(
 
 keyboard_copy = InlineKeyboardMarkup(
     inline_keyboard=[[InlineKeyboardButton(text="Вывести строки с IP-адресами указанной страны", callback_data="copy_ips")]]
+)
+
+keyboard_choose_action = InlineKeyboardMarkup(
+    inline_keyboard=[
+        [InlineKeyboardButton(text="Обрезать 4-ый октет", callback_data="remove_fourth_octet"),
+         InlineKeyboardButton(text="Обрезать порт", callback_data="remove_the_port")],
+    ]
 )

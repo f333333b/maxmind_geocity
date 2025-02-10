@@ -1,5 +1,6 @@
 import asyncio
 import logging
+from aiolimiter import AsyncLimiter
 
 from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
@@ -10,6 +11,7 @@ from commands import commands
 from capitals import capitals
 from db_updating import update_check
 from logging_utils import logs_to_db
+from middlewares import RateLimitMiddleware
 from db_capitals_utils import check_db_connection, init_db_pool, insert_capitals
 
 # создание диспатчера с временным хранилищем состояний пользователя
@@ -17,6 +19,9 @@ dp = Dispatcher(storage=MemoryStorage())
 
 # подключение роутера к диспатчеру
 dp.include_router(router)
+
+# подключение middleware к диспатчеру
+dp.update.middleware(RateLimitMiddleware())
 
 async def main():
     # запуск обработки сообщений
@@ -26,7 +31,7 @@ async def main():
     asyncio.create_task(update_check())
 
     # запуск фонового внесения информации из логов в базу данных
-    asyncio.create_task(logs_to_db())
+    #asyncio.create_task(logs_to_db())
 
     # запуск пула к базе данных capitals
     await init_db_pool()

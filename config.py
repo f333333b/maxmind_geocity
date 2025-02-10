@@ -1,4 +1,6 @@
 import os
+
+from aiolimiter import AsyncLimiter
 from dotenv import load_dotenv
 from aiogram import Bot
 
