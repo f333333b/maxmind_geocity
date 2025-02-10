@@ -1,6 +1,5 @@
 import asyncio
 import logging
-from aiolimiter import AsyncLimiter
 
 from aiogram import Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage

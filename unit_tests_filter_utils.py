@@ -138,28 +138,28 @@ async def test_filter_by_octet(first_list, target_octet, expected_result, expect
     "first_list, octet_flag, expected_result, expected_state",
     [
         ("192.168.1.1\n192.168.1.2", True,
-        "Отфильтрованные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
+        "Обработанные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.5\n192.168.10\n1.1.1.1", True,
-        "Отфильтрованные IP-адреса:\n<code>192.168.5</code>\n<code>192.168.10</code>\n<code>1.1.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
+        "Обработанные IP-адреса:\n<code>192.168.5</code>\n<code>192.168.10</code>\n<code>1.1.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.1.1 192.168.2.1 192.168.1.3", True,
-        "Отфильтрованные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.2</code>\n<code>192.168.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
+        "Обработанные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.2</code>\n<code>192.168.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.115 16.17.3.5 27.52.78.2 2.2.2.2 1.1.1.1.1..\n192.168.2.115.116 1.12.25.26", True,
-        "Отфильтрованные IP-адреса:\n<code>192.168.115</code>\n<code>16.17.3</code>\n<code>27.52.78</code>\n<code>2.2.2</code>\n"
+        "Обработанные IP-адреса:\n<code>192.168.115</code>\n<code>16.17.3</code>\n<code>27.52.78</code>\n<code>2.2.2</code>\n"
         "<code>1.1.1</code>\n<code>192.168.2</code>\n<code>1.12.25</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.1.1\n192.168.1.2\n27.52.78.2 2.2.2.2 7.7.7.7", True,
-        "Отфильтрованные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.1</code>\n<code>27.52.78</code>\n<code>2.2.2</code>\n<code>7.7.7</code>",
+        "Обработанные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.1</code>\n<code>27.52.78</code>\n<code>2.2.2</code>\n<code>7.7.7</code>",
          UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.1.1:100000\n192.168.1.2:2000", False,
-        "Отфильтрованные IP-адреса:\n<code>192.168.1.1</code>\n<code>192.168.1.2</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
+        "Обработанные IP-адреса:\n<code>192.168.1.1</code>\n<code>192.168.1.2</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.5:2200\n192.168.10:2422\n1.1.1.1:222", False,
-        "Отфильтрованные IP-адреса:\n<code>192.168.5</code>\n<code>192.168.10</code>\n<code>1.1.1.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
+        "Обработанные IP-адреса:\n<code>192.168.5</code>\n<code>192.168.10</code>\n<code>1.1.1.1</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.1.1:3333 192.168.2.1:2111 192.168.1.3:1111", False,
-        "Отфильтрованные IP-адреса:\n<code>192.168.1.1</code>\n<code>192.168.2.1</code>\n<code>192.168.1.3</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
+        "Обработанные IP-адреса:\n<code>192.168.1.1</code>\n<code>192.168.2.1</code>\n<code>192.168.1.3</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.115:1110 16.17.3.5:2777 27.52.78.2:7744 2.2.2.2:2374 1.1.1.1.1:333dsa..\n192.168.2.115:4323 1.12.25.26:6162", False,
-        "Отфильтрованные IP-адреса:\n<code>192.168.115</code>\n<code>16.17.3.5</code>\n<code>27.52.78.2</code>\n<code>2.2.2.2</code>\n"
+        "Обработанные IP-адреса:\n<code>192.168.115</code>\n<code>16.17.3.5</code>\n<code>27.52.78.2</code>\n<code>2.2.2.2</code>\n"
         "<code>1.1.1.1</code>\n<code>192.168.2.115</code>\n<code>1.12.25.26</code>", UserState.AWAITING_FILTER_OCTET_FIRST),
         ("192.168.1.1:22222\n192.168.1.2:222233\n27.52.78.2:5122 2.2.2.2 7.7.7.7:64323", False,
-        "Отфильтрованные IP-адреса:\n<code>192.168.1.1</code>\n<code>192.168.1.2</code>\n<code>27.52.78.2</code>\n<code>2.2.2.2</code>\n<code>7.7.7.7</code>",
+        "Обработанные IP-адреса:\n<code>192.168.1.1</code>\n<code>192.168.1.2</code>\n<code>27.52.78.2</code>\n<code>2.2.2.2</code>\n<code>7.7.7.7</code>",
          UserState.AWAITING_FILTER_OCTET_FIRST)
     ]
 )

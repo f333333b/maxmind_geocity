@@ -11,7 +11,7 @@ from config import pattern
 async def filter_ips_input(first_list, filter_type, state: FSMContext):
     """Функция получения списка IP-адресов для фильтрации"""
     if not re.findall(pattern, first_list):
-        return msg['no_ips'], ''
+        return msg['no_ips']
     try:
         await state.update_data(first_list=first_list)
         if filter_type == 'filter_by_list':
