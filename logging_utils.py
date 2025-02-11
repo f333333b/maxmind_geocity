@@ -8,7 +8,7 @@ from config import user_loggers
 async def setup_user_logger(user_id):
     """Функция запуска логирования"""
     if user_id in user_loggers:
-        user_loggers[user_id]
+        return user_loggers[user_id]
     log_filename = "logs/{}.log".format(user_id)
     os.makedirs(os.path.dirname(log_filename), exist_ok=True)
     logger = logging.getLogger(str(user_id))
