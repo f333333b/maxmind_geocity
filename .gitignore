@@ -1,0 +1,6 @@
+*.env
+*.log
+*.xml
+*.iml
+*.mmdb
+*.ini
