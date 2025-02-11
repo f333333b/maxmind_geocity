@@ -9,35 +9,169 @@ from states import UserState
 @pytest.mark.parametrize(
     "first_list, filter_type, expected_result, expected_state",
     [
-        ("192.168.1.1\n192.168.1.2", 'filter_by_list', msg['filter_ips_second'], UserState.AWAITING_FILTER_LIST_SECOND),
-        ("192.168.1\n192.168.2", 'filter_by_list', msg['filter_ips_second'], UserState.AWAITING_FILTER_LIST_SECOND),
-        ("192.168.1 192.168.2 192.177.77", 'filter_by_list', msg['filter_ips_second'], UserState.AWAITING_FILTER_LIST_SECOND),
-        ("192.168.1.0 192.168.2.0 192.177.77.0", 'filter_by_list', msg['filter_ips_second'], UserState.AWAITING_FILTER_LIST_SECOND),
-        ("192.168.1 192.168.2.0 192.177.77.0 0.0.0.0..\n1.2.2.2 1.2.4.6 6.6.6 22.22.22\n\n\n123.123.123.22", 'filter_by_list',
-         msg['filter_ips_second'], UserState.AWAITING_FILTER_LIST_SECOND),
-        ("192.168 192\n\n\n1112.1412512", 'filter_by_list', msg['no_ips'], UserState.AWAITING_FILTER_LIST_FIRST),
-        ("тест, раз, два, три", 'filter_by_list', msg['no_ips'], UserState.AWAITING_FILTER_LIST_FIRST),
-        ("", 'filter_by_list', msg['no_ips'], UserState.AWAITING_FILTER_LIST_FIRST),
-        ("192.168.1.1\n192.168.1.2", 'filter_by_octet', msg['enter_octet'], UserState.AWAITING_FILTER_OCTET_SECOND),
-        ("192.168.1\n192.168.2", 'filter_by_octet', msg['enter_octet'], UserState.AWAITING_FILTER_OCTET_SECOND),
-        ("192.168.1 192.168.2 192.177.77", 'filter_by_octet', msg['enter_octet'], UserState.AWAITING_FILTER_OCTET_SECOND),
-        ("192.168.1.0 192.168.2.0 192.177.77.0", 'filter_by_octet', msg['enter_octet'], UserState.AWAITING_FILTER_OCTET_SECOND),
-        ("192.168.1 192.168.2.0 192.177.77.0 0.0.0.0..\n1.2.2.2 1.2.4.6 6.6.6 22.22.22\n\n\n123.123.123.22", 'filter_by_octet',
-         msg['enter_octet'], UserState.AWAITING_FILTER_OCTET_SECOND),
-        ("192.168 192\n\n\n1112.1412512", 'filter_by_octet', msg['no_ips'], UserState.AWAITING_FILTER_OCTET_SECOND),
-        ("тест, раз, два, три", 'filter_by_octet', msg['no_ips'], UserState.AWAITING_FILTER_OCTET_SECOND),
-        ("", 'filter_by_octet', msg['no_ips'], UserState.AWAITING_FILTER_LIST_FIRST),
-        ("192.168.1.1\n192.168.1.2", 'shorten', msg['choose_action'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
-        ("192.168.1\n192.168.2", 'shorten', msg['choose_action'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
-        ("192.168.1 192.168.2 192.177.77", 'shorten', msg['choose_action'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
-        ("192.168.1.0 192.168.2.0 192.177.77.0", 'shorten', msg['choose_action'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
-        ("192.168.1 192.168.2.0 192.177.77.0 0.0.0.0..\n1.2.2.2 1.2.4.6 6.6.6 22.22.22\n\n\n123.123.123.22", 'shorten',
-         msg['choose_action'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
-        ("192.168 192\n\n\n1112.1412512", 'shorten', msg['no_ips'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
-        ("тест, раз, два, три", 'shorten', msg['no_ips'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
-        ("", 'shorten', msg['no_ips'], UserState.AWAITING_FILTER_CHOOSE_FILTER),
+        ("192.168.1.1\n192.168.1.2",
+         'filter_by_list',
+         msg['filter_ips_second'],
+         UserState.AWAITING_FILTER_LIST_SECOND),
+
+        ("192.168.1\n192.168.2",
+         'filter_by_list',
+         msg['filter_ips_second'],
+         UserState.AWAITING_FILTER_LIST_SECOND),
+
+        ("192.168.1 192.168.2 192.177.77",
+         'filter_by_list',
+         msg['filter_ips_second'],
+         UserState.AWAITING_FILTER_LIST_SECOND),
+
+        ("192.168.1.0 192.168.2.0 192.177.77.0",
+         'filter_by_list',
+         msg['filter_ips_second'],
+         UserState.AWAITING_FILTER_LIST_SECOND),
+
+        ("192.168.1 192.168.2.0 192.177.77.0 0.0.0.0..\n1.2.2.2 1.2.4.6 6.6.6 22.22.22\n\n\n123.123.123.22",
+         'filter_by_list',
+         msg['filter_ips_second'],
+         UserState.AWAITING_FILTER_LIST_SECOND),
+
+        ("192.168 192\n\n\n1112.1412512",
+         'filter_by_list',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_LIST_FIRST),
+
+        ("тест, раз, два, три",
+         'filter_by_list',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_LIST_FIRST),
+
+        ("",
+         'filter_by_list',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_LIST_FIRST),
+
+        ("192.168.1.1\n192.168.1.2",
+         'filter_by_octet',
+         msg['enter_octet'],
+         UserState.AWAITING_FILTER_OCTET_SECOND),
+
+        ("192.168.1\n192.168.2",
+         'filter_by_octet',
+         msg['enter_octet'],
+         UserState.AWAITING_FILTER_OCTET_SECOND),
+
+        ("192.168.1 192.168.2 192.177.77",
+         'filter_by_octet',
+         msg['enter_octet'],
+         UserState.AWAITING_FILTER_OCTET_SECOND),
+
+        ("192.168.1.0 192.168.2.0 192.177.77.0",
+         'filter_by_octet',
+         msg['enter_octet'],
+         UserState.AWAITING_FILTER_OCTET_SECOND),
+
+        ("192.168.1 192.168.2.0 192.177.77.0 0.0.0.0..\n1.2.2.2 1.2.4.6 6.6.6 22.22.22\n\n\n123.123.123.22",
+         'filter_by_octet',
+         msg['enter_octet'],
+         UserState.AWAITING_FILTER_OCTET_SECOND),
+
+        ("192.168 192\n\n\n1112.1412512",
+         'filter_by_octet',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_OCTET_SECOND),
+
+        ("тест, раз, два, три",
+         'filter_by_octet',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_OCTET_SECOND),
+
+        ("",
+         'filter_by_octet',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_LIST_FIRST),
+
+        ("192.168.1.1\n192.168.2.2",
+         'remove_fourth_octet',
+         "Обработанные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.2</code>",
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("192.168.6.6 192.168.10.11",
+         'remove_fourth_octet',
+         "Обработанные IP-адреса:\n<code>192.168.6</code>\n<code>192.168.10</code>",
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("192.168.1.6\n192.168.26.6\n192.177.77.11",
+         'remove_fourth_octet',
+         "Обработанные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.26</code>\n<code>192.177.77</code>",
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("192.168.1.0 192.168.2.0 192.177.77.0",
+         'remove_fourth_octet',
+         "Обработанные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.2</code>\n<code>192.177.77</code>",
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("192.168.1.100 192.168.2.0 192.177.77.0 0.0.0.0..\n1.2.2.2 1.2.4.6 6.6.6.10 22.22.22.100\n\n\n123.123.123.22",
+         'remove_fourth_octet',
+         "Обработанные IP-адреса:\n<code>192.168.1</code>\n<code>192.168.2</code>\n<code>192.177.77</code>\n<code>0.0.0</code>\n"
+         "<code>1.2.2</code>\n<code>1.2.4</code>\n<code>6.6.6</code>\n<code>22.22.22</code>\n<code>123.123.123</code>",
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("192.168 192\n\n\n11.12.14.125.12",
+         'remove_fourth_octet',
+         "Обработанные IP-адреса:\n<code>11.12.14</code>",
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("тест, раз, два, три",
+         'remove_fourth_octet',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("",
+         'remove_fourth_octet',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST),
+
+        ("192.168.1.1:2000\n192.168.2.2:1000",
+         'remove_port',
+         "Обработанные IP-адреса:\n<code>192.168.1.1</code>\n<code>192.168.2.2</code>",
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST),
+
+        ("192.168.6.6:1111 192.168.10.11:2222",
+         'remove_port',
+         "Обработанные IP-адреса:\n<code>192.168.6.6</code>\n<code>192.168.10.11</code>",
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST),
+
+        ("192.168.1.6:1233\n192.168.26.6:5000\n192.177.77.11:5555",
+         'remove_port',
+         "Обработанные IP-адреса:\n<code>192.168.1.6</code>\n<code>192.168.26.6</code>\n<code>192.177.77.11</code>",
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST),
+
+        ("192.168.1.0:0000 192.168.2.0:2233 192.177.77.0:4455",
+         'remove_port',
+         "Обработанные IP-адреса:\n<code>192.168.1.0</code>\n<code>192.168.2.0</code>\n<code>192.177.77.0</code>",
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST),
+
+        ("192.168.1.100:5555 192.168.2.0:6666 192.177.77.0:0009 0.0.0.0:1233..\n1.2.2.2:3311 1.2.4.6:5000 6.6.6.10:9090 22.22.22.100:0000\n\n\n123.123.123.22:9999",
+         'remove_port',
+         "Обработанные IP-адреса:\n<code>192.168.1.100</code>\n<code>192.168.2.0</code>\n<code>192.177.77.0</code>\n<code>0.0.0.0</code>\n"
+         "<code>1.2.2.2</code>\n<code>1.2.4.6</code>\n<code>6.6.6.10</code>\n<code>22.22.22.100</code>\n<code>123.123.123.22</code>",
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST),
+
+        ("192.168:0000 192\n\n\n11.12.14.125:1233",
+         'remove_port',
+         "Обработанные IP-адреса:\n<code>11.12.14.125</code>",
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST),
+
+        ("тест, раз, два, три",
+         'remove_port',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST),
+
+        ("",
+         'remove_port',
+         msg['no_ips'],
+         UserState.AWAITING_FILTER_REMOVE_PORT_LIST)
     ]
-)
+
 @pytest.mark.asyncio
 async def test_filter_ips_input(first_list, filter_type, expected_result, expected_state):
     """Тестирование функции filter_ips_input с разными входными данными"""
@@ -46,6 +180,7 @@ async def test_filter_ips_input(first_list, filter_type, expected_result, expect
 
     # устанавливаем что состояние пользователя равно expected_state
     mock_state.get_state.return_value = expected_state
+    mock_state.get_data.return_value = {'first_list': first_list}
 
     # выполняем функцию
     result = await filter_ips_input(first_list, filter_type, mock_state)

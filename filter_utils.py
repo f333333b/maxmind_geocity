@@ -10,6 +10,7 @@ from config import pattern
 
 async def filter_ips_input(first_list, filter_type, state: FSMContext):
     """Функция получения списка IP-адресов для фильтрации"""
+    print('test1')
     if not re.findall(pattern, first_list):
         return msg['no_ips']
     try:
@@ -21,6 +22,7 @@ async def filter_ips_input(first_list, filter_type, state: FSMContext):
             await state.set_state(UserState.AWAITING_FILTER_OCTET_SECOND)
             return msg['enter_octet']
         elif filter_type == 'remove_fourth_octet':
+            print(state.get_state)
             return await shorten_ips(octet_flag=True, state=state)
         elif filter_type == 'remove_port':
             return await shorten_ips(octet_flag=False, state=state)
@@ -78,9 +80,10 @@ async def shorten_ips(octet_flag, state: FSMContext):
         result = found_ips
     else:
         try:
-            result = map(lambda ip: ip[:ip.rfind('.')] if ip.count('.') == 3 else ip, found_ips)
+            result = list(map(lambda ip: ip[:ip.rfind('.')] if ip.count('.') == 3 else ip, found_ips))
         except Exception as e:
             logging.error("Ошибка при фильтрации IP-адресов: %s.\nТекст запроса: %s", e, first_list)
             logging.error(traceback.format_exc())
             return "Произошла ошибка при обработке IP-адресов."
+    print('test2')
     return "Обработанные IP-адреса:\n<code>" + "</code>\n<code>".join(result) + "</code>"
