@@ -89,25 +89,21 @@ async def get_ip_info_result(new_text_dict, result):
                     for ip_addresses in v2:
                         result.extend(ip_addresses if isinstance(ip_addresses, list) else [ip_addresses])
 
-async def add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city, target_flag=False):
+async def add_cities(new_text_dict, result_copy, line, match, country_id, city, target_flag=False):
     """Функция добавления городов с IP-адресами в результирующие списки"""
-    logging.debug(f"add_cities finished with: {new_text_dict}\n{ip_original}\n{result_copy}\n{line}\n{match}\n{country_id}\n{city}\n{target_flag}")
+    logging.debug(f"add_cities finished with: {new_text_dict}\n{match}\n{result_copy}\n{line}\n{match}\n{country_id}\n{city}\n{target_flag}")
     if city not in new_text_dict[country_id]['cities']:
         new_text_dict[country_id]['cities'][city] = []
-    if line.replace(match, f"<code>{ip_original}</code>") not in new_text_dict[country_id]['cities'][city]:
-        new_text_dict[country_id]['cities'][city].append(line.replace(ip_original, f"<code>{ip_original}</code>")
+    if line.replace(match, f"<code>{match}</code>") not in new_text_dict[country_id]['cities'][city]:
+        new_text_dict[country_id]['cities'][city].append(line.replace(match, f"<code>{match}</code>")
 )
     if target_flag:
-        result_copy.append(line.replace(ip_original, f"<code>{ip_original}</code>"))
-    logging.debug(f"add_cities finished with: {new_text_dict}\n{ip_original}\n{result_copy}\n{line}\n{match}\n{country_id}\n{city}\n{target_flag}")
+        result_copy.append(line.replace(match, f"<code>{match}</code>"))
+    logging.debug(f"add_cities finished with: {new_text_dict}\n{match}\n{result_copy}\n{line}\n{match}\n{country_id}\n{city}\n{target_flag}")
 
 async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_country_iso, result_copy, line):
     """Функция создания словаря с городами"""
-    ip_original = match
-    if match.count('.') == 2:
-        ip = ip_original + '.0'
-    elif match.count('.') == 3:
-        ip = ip_original
+    ip = match + '.0' if match.count('.') == 2 else match
     try:
         response = city_file.city(ip)
         country_id = response.country.iso_code
@@ -121,11 +117,11 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
             new_text_dict[country_id] = {'head': f'\n{flag} {country_id} ({country_ru})', 'cities': {}}
         if target_flag:
             if target_country_iso == country_id:
-                await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city,
+                await add_cities(new_text_dict, result_copy, line, match, country_id, city,
                                  target_flag=True)
-            await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
+            await add_cities(new_text_dict, result_copy, line, match, country_id, city)
         else:
-            await add_cities(new_text_dict, ip_original, result_copy, line, match, country_id, city)
+            await add_cities(new_text_dict, result_copy, line, match, country_id, city)
     except:
         if 'Unknown' not in new_text_dict:
             new_text_dict['Unknown'] = {}
@@ -134,4 +130,4 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
                 if '\n❌Invalid IP' not in new_text_dict['Unknown']['cities']:
                     new_text_dict['Unknown']['cities']['\n❌Invalid IP'] = []
         new_text_dict['Unknown']['cities']['\n❌Invalid IP'].append(
-                line.replace(match, f"<b><code>{ip_original}</code></b>"))
+                line.replace(match, f"<b><code>{match}</code></b>"))

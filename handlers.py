@@ -4,7 +4,7 @@ from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, ContentType, Message
 
 from commands import commands
-from config import trusted_users
+from config import TRUSTED_USERS
 from filter_utils import filter_by_octet, filter_ips_input, filter_ips_list, shorten_ips
 from geoip_utils import process_check, process_target_copy
 from keyboards import keyboard_main, keyboard_choose_action
@@ -19,7 +19,7 @@ router = Router()
 async def default_state_handler(message: Message, state: FSMContext):
     """Обработка стандартного состояния"""
     user_id = message.from_user.id
-    if user_id in trusted_users:
+    if user_id in TRUSTED_USERS:
         await state.set_state(UserState.START)
         return await message.answer('Здравствуйте! Вы авторизованы. ' + msg['start'], reply_markup=keyboard_main)
     else:
@@ -49,7 +49,7 @@ async def command_start_handler(message: Message):
 async def command_help_handler(message: Message, state: FSMContext):
     """Обработка команды /help"""
     await state.set_state(UserState.START)
-    return await message.answer(msg['help'], parse_mode='HTML')
+    return await message.answer(msg['help'], parse_mode='HTML', disable_web_page_preview=True)
 
 @router.message(Command("check"))
 @log_interaction

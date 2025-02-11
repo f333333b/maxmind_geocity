@@ -8,6 +8,7 @@ load_dotenv()
 
 TOKEN = os.getenv('BOT_TOKEN')
 LICENSE_KEY = os.getenv('LICENSE_KEY')
+TRUSTED_USERS = list(map(lambda x: int(x), os.getenv('TRUSTED_USERS').split(',')))
 bot = Bot(token=TOKEN)
 database_filename = 'GeoLite2-City.mmdb'
 url = (
@@ -18,23 +19,6 @@ url = (
 
 # регулярное выражение для поиска подсетей и IP-адресов
 pattern = r"\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}|(?<![\d\.])\d{1,3}\.\d{1,3}\.\d{1,3}(?!\.\d)"
-
-# список авторизованных пользователей
-trusted_users = [
-    442676963,
-    368838927,
-    581527362,
-    847847531,
-    5022389993,
-    338096928,
-    652751349,
-    1072500729,
-    812773612,
-    786742519,
-    467623902,
-    391406039,
-    11795801
-]
 
 # хранение логгеров всех пользователей
 user_loggers = {}
