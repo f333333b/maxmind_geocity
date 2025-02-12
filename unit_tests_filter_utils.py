@@ -171,7 +171,7 @@ from states import UserState
          msg['no_ips'],
          UserState.AWAITING_FILTER_REMOVE_PORT_LIST)
     ]
-
+)
 @pytest.mark.asyncio
 async def test_filter_ips_input(first_list, filter_type, expected_result, expected_state):
     """Тестирование функции filter_ips_input с разными входными данными"""

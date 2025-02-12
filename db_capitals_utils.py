@@ -9,6 +9,7 @@ async def get_capital(country_en):
             WHERE country = $1
             """, country_en)
         if result:
+            print(result['capital'])
             return result['capital']
         else:
             return "Неизвестно"
