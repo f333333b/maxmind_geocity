@@ -48,6 +48,7 @@ async def process_target_copy(user_id):
 
 async def get_ip_info(text_input: str, target_flag: bool):
     """Функция для обработки текста и получения IP-адресов"""
+    logging.info(f'started with:\ntext_input={text_input}\ntarget_flag={target_flag}')
     all_ips = re.findall(pattern, text_input)
     ip_list_text = text_input.splitlines()
     new_text_dict, result_copy = {}, []
@@ -75,6 +76,7 @@ async def get_ip_info(text_input: str, target_flag: bool):
             await get_ip_info_result(new_text_dict, result)
     if valid_target and not result_copy:
         result_copy = 'ips not found'
+    logging.info(f'finished with:\nresult={result}\nresult_copy={result_copy}')
     return result, result_copy
 
 async def get_ip_info_result(new_text_dict, result):
@@ -104,19 +106,12 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
     ip = match + '.0' if match.count('.') == 2 else match
     try:
         response = city_file.city(ip)
-        print("response = city_file.city(ip) - DONE")
         country_id = response.country.iso_code
-        print("country_id = response.country.iso_code - DONE")
         country_ru = response.country.names.get('ru', '')
-        print("country_ru = response.country.names.get('ru', '') - DONE")
         country_en = response.country.names.get('en', '')
-        print(country_en)
-        print("country_en = response.country.names.get('en', '') - DONE")
         city = response.city.names.get('ru', '')
-        print("city = response.city.names.get('ru', '') - DONE")
         if not city:
             city = await get_capital(country_en)
-            print("city = await get_capital(country_en) - DONE")
         flag = countryflag.getflag([country_id])
         if country_id not in new_text_dict:
             new_text_dict[country_id] = {'head': f'\n{flag} {country_id} ({country_ru})', 'cities': {}}
@@ -128,7 +123,6 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
         else:
             await add_cities(new_text_dict, result_copy, line, match, country_id, city)
     except:
-        print("Error")
         if 'Unknown' not in new_text_dict:
             new_text_dict['Unknown'] = {}
             if 'cities' not in new_text_dict['Unknown']:
