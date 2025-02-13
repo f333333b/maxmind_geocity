@@ -1,3 +1,6 @@
-.env. e n v 
- 
-.mmdb
+*.env
+*.log
+*.xml
+*.iml
+*.mmdb
+*.ini

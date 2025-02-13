@@ -5,9 +5,9 @@ from aiogram.types import CallbackQuery, ContentType, Message
 
 from commands import commands
 from config import TRUSTED_USERS
-from filter_utils import filter_by_octet, filter_ips_input, filter_ips_list, shorten_ips
+from filter_utils import filter_by_octet, filter_ips_input, filter_ips_list
 from geoip_utils import process_check, process_target_copy
-from keyboards import keyboard_main, keyboard_choose_action
+from keyboards import keyboard_main
 from logging_utils import log_interaction
 from messages import msg
 from states import UserState
@@ -40,8 +40,9 @@ async def unsupported_command_handler(message: Message):
 
 @router.message(Command("start"))
 @log_interaction
-async def command_start_handler(message: Message):
+async def command_start_handler(message: Message, state: FSMContext):
     """Обработка команды /start"""
+    await state.set_state(UserState.START)
     return await message.answer(msg['start'], reply_markup=keyboard_main)
 
 @router.message(Command("help"))
@@ -65,25 +66,32 @@ async def command_target_handler(message: Message, state: FSMContext):
     await state.set_state(UserState.AWAITING_TARGET_CHECK)
     return await message.answer(msg['enter_target_ips'])
 
-@router.message(Command("filter"))
+@router.message(Command("filter_by_list"))
 @log_interaction
 async def command_filter_list_handler(message: Message, state: FSMContext):
-    """Обработка команды /filter"""
+    """Обработка команды /filter_by_list"""
     await state.set_state(UserState.AWAITING_FILTER_LIST_FIRST)
     return await message.answer(msg['filter_ips_first'])
 
-@router.message(Command("filter_octet"))
+@router.message(Command("filter_by_octet"))
 @log_interaction
 async def command_filter_octet_handler(message: Message, state: FSMContext):
-    """Обработка команды /filter_octet"""
+    """Обработка команды /filter_by_octet"""
     await state.set_state(UserState.AWAITING_FILTER_OCTET_FIRST)
     return await message.answer(msg['filter_ips_first'])
 
-@router.message(Command("shorten"))
+@router.message(Command("remove_fourth_octet"))
 @log_interaction
-async def command_shorten_handler(message: Message, state: FSMContext):
-    """Обработка команды /shorten"""
-    await state.set_state(UserState.AWAITING_FILTER_SHORTEN_LIST)
+async def command_remove_fourth_octet_handler(message: Message, state: FSMContext):
+    """Обработка команды /remove_fourth_octet"""
+    await state.set_state(UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST)
+    return await message.answer(msg['filter_ips_first'])
+
+@router.message(Command("remove_port"))
+@log_interaction
+async def command_remove_port(message: Message, state: FSMContext):
+    """Обработка команды /remove_port"""
+    await state.set_state(UserState.AWAITING_FILTER_REMOVE_PORT_LIST)
     return await message.answer(msg['filter_ips_first'])
 
 @router.message(UserState.START)
@@ -109,58 +117,49 @@ async def process_target_handler(message: Message):
 @router.message(UserState.AWAITING_FILTER_LIST_FIRST)
 @log_interaction
 async def process_filter_list_first_handler(message: Message, state: FSMContext):
-    """Обработка ввода первого списка в /filter"""
+    """Обработка ввода первого списка в /filter_by_list"""
     await state.set_state(UserState.AWAITING_FILTER_LIST_SECOND)
     return await message.answer(text=await filter_ips_input(message.text, filter_type='filter_by_list', state=state), parse_mode="HTML")
 
-@router.message(UserState.AWAITING_FILTER_SHORTEN_LIST)
+@router.message(UserState.AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST)
 @log_interaction
-async def shorten_list_input_handler(message: Message, state: FSMContext):
-    """Обработка ввода списка в /shorten"""
-    return await message.answer(text=await filter_ips_input(message.text, filter_type='shorten', state=state),
-                                parse_mode="HTML", reply_markup=keyboard_choose_action)
+async def remove_fourth_octet_input_handler(message: Message, state: FSMContext):
+    """Обработка ввода списка в /remove_fourth_octet"""
+    return await message.answer(text=await filter_ips_input(message.text, filter_type='remove_fourth_octet', state=state),
+                                parse_mode="HTML")
+
+@router.message(UserState.AWAITING_FILTER_REMOVE_PORT_LIST)
+@log_interaction
+async def remove_port_input_handler(message: Message, state: FSMContext):
+    """Обработка ввода списка в /remove_port"""
+    return await message.answer(text=await filter_ips_input(message.text, filter_type='remove_port', state=state),
+                                parse_mode="HTML")
 
 @router.message(UserState.AWAITING_FILTER_LIST_SECOND)
 @log_interaction
 async def process_filter_list_second_handler(message: Message, state: FSMContext):
-    """Обработка ввода второго списка в /filter"""
+    """Обработка ввода второго списка в /filter_by_list"""
     return await message.answer(text=await filter_ips_list(message.text, state=state), parse_mode="HTML")
 
 @router.message(UserState.AWAITING_FILTER_OCTET_FIRST)
 @log_interaction
 async def process_filter_octet_first_handler(message: Message, state: FSMContext):
-    """Обработка ввода списка в /filter_octet"""
+    """Обработка ввода списка в /filter_by_octet"""
     await state.set_state(UserState.AWAITING_FILTER_OCTET_SECOND)
     return await message.answer(text=await filter_ips_input(message.text, filter_type='filter_by_octet', state=state), parse_mode="HTML")
 
 @router.message(UserState.AWAITING_FILTER_OCTET_SECOND)
 @log_interaction
 async def process_filter_octet_second_handler(message: Message, state: FSMContext):
-    """Обработка ввода октета в /filter_octet"""
+    """Обработка ввода октета в /filter_by_octet"""
     return await message.answer(text=await filter_by_octet(message.text, state=state), parse_mode="HTML")
 
-
-# callback-обработчики
 @router.callback_query(F.data == "copy_ips")
 @log_interaction
 async def copy_ips_callback_handler(query: CallbackQuery):
     """Обработка нажатия кнопки 'Вывести строки с IP-адресами указанной страны'"""
     user_id = query.from_user.id
     return await query.message.answer(text=await process_target_copy(user_id), parse_mode="HTML")
-
-@router.callback_query(F.data == "remove_fourth_octet")
-@log_interaction
-async def remove_fourth_octet_callback_handler(query: CallbackQuery, state: FSMContext):
-    """Обработка нажатия кнопки 'Обрезать 4-ый октет'"""
-    return (await query.message.answer(text=await shorten_ips(octet_flag=True, state=state), parse_mode="HTML"),
-            await query.message.answer(msg["process_ips"]))
-
-@router.callback_query(F.data == "remove_the_port")
-@log_interaction
-async def remove_the_port_callback_handler(query: CallbackQuery, state: FSMContext):
-    """Обработка нажатия кнопки 'Обрезать порт'"""
-    return (await query.message.answer(text=await shorten_ips(octet_flag=False, state=state), parse_mode="HTML"),
-            await query.message.answer(msg["process_ips"]))
 
 def register_handlers(dp):
     dp.include_router(router)

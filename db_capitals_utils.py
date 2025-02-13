@@ -5,11 +5,11 @@ async def get_capital(country_en):
     async with db_pool.acquire() as conn:
         result = await conn.fetchrow(
             """
-            SELECT capital_name FROM capitals
-            WHERE country_name = $1
+            SELECT capital FROM capitals
+            WHERE country = $1
             """, country_en)
         if result:
-            return result['capital_name']
+            return result['capital']
         else:
             return "Неизвестно"
 
@@ -38,10 +38,10 @@ async def insert_capitals(capitals):
     """Функция внесения информации из словаря в базу данных capitals"""
     try:
         async with db_pool.acquire() as conn:
-            for country_name, capital_name in capitals.items():
+            for country, capital in capitals.items():
                 await conn.execute(
-                    "INSERT INTO capitals (country_name, capital_name) VALUES ($1, $2)",
-                    country_name, capital_name
+                    "INSERT INTO capitals (country, capital) VALUES ($1, $2)",
+                    country, capital
                 )
             print("Данные успешно внесены в таблицу.")
     except Exception as e:
