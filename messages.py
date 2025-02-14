@@ -120,4 +120,4 @@ https://github.com/f333333b/maxmind_geocity
         "no_access": "Извините, у вас нет доступа к этому боту."
 }
 
-test = 123+100
+test = 123+123
