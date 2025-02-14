@@ -4,3 +4,5 @@
 *.iml
 *.mmdb
 *.ini
+echo "__pycache__/" >> .gitignore
+git rm -r --cached __pycache__/
