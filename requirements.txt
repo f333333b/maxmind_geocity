@@ -1,0 +1,15 @@
+pip~=25.0
+attrs~=24.3.0
+aiogram~=3.17.0
+python-dotenv~=1.0.1
+aiofiles~=24.1.0
+aiohttp~=3.11.11
+countryflag~=0.1.2b3
+geoip2~=4.8.1
+pycountry~=24.6.1
+aiolimiter~=1.2.1
+asyncpg~=0.30.0
+pytest~=8.3.4
+black
+isort
+flake8
