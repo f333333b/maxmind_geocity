@@ -1,8 +1,10 @@
 *.env
 *.log
-*.xml
+*.xml*
 *.iml
 *.mmdb
 *.ini
+*.pyc
+
 echo "__pycache__/" >> .gitignore
 git rm -r --cached __pycache__/
