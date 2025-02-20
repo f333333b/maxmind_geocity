@@ -101,13 +101,17 @@ async def check_url(url: str) -> str:
 
 async def process_result(status: dict):
     """Функция обработки и вывода результата проверок по всем IP-адресам"""
+    max_length = max(len(name) for name in country_names.values())
+    total_width = max_length + 2  # Учитываем пробел и символ ✅/❌
+
     message_lines = []
     for country_code, json_str in status.items():
         data = json.loads(json_str)[0]
         uptime = data['uptime']
         status_icon = '✅' if uptime == 100 else '❌' if uptime == 0 else '⚠️'
         country_name = country_names.get(country_code, country_code)
-        message_lines.append(f"{country_name}: {status_icon}")
+        line = f"{country_name:<{max_length}}{status_icon}"
+        message_lines.append(line)
     result = '\n'.join(message_lines)
     print(result)
     return result
