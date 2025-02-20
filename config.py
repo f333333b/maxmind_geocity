@@ -5,10 +5,11 @@ from aiogram import Bot
 
 load_dotenv()
 
-TOKEN = os.getenv('BOT_TOKEN')
+BOT_TOKEN = os.getenv('BOT_TOKEN')
 LICENSE_KEY = os.getenv('LICENSE_KEY')
 TRUSTED_USERS = list(map(lambda x: int(x), os.getenv('TRUSTED_USERS').split(',')))
-bot = Bot(token=TOKEN)
+API_TOKEN = os.getenv('API_TOKEN')
+bot = Bot(token=BOT_TOKEN)
 database_filename = 'GeoLite2-City.mmdb'
 url = (
     f"https://download.maxmind.com/app/geoip_download?"

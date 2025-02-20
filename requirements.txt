@@ -13,3 +13,5 @@ pytest~=8.3.4
 black
 isort
 flake8
+requests~=2.32.3
+pandas~=2.2.3

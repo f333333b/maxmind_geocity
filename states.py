@@ -17,3 +17,5 @@ class UserState(StatesGroup):
     AWAITING_FILTER_REMOVE_FOURTH_OCTET_LIST = State()
     AWAITING_FILTER_REMOVE_PORT_LIST = State()
     COPY_IPS = State()
+    PING = State()
+    AWAITING_PING = State()
