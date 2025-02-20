@@ -12,7 +12,8 @@ load_dotenv()
 api_token = API_TOKEN
 
 # список ID IP-адресов через запятую
-tm_list = 'ru1,jp1,au1,at1,am1,uk1,us1,tr1,se1,za1'
+#tm_list = 'ru1,jp1,au1,at1,am1,uk1,us1,tr1,se1,za1'
+tm_list = 'ru1,ru2,ru3,ru4,ru5,ru6,ru7,ru8,ru9,ru10,ru11,ru12,ru13,ru14,ru15'
 
 country_names = {
     'ru1': 'Россия',
@@ -60,8 +61,22 @@ async def add_task(testing_url: str) -> str:
                     f'{period_error}&rk={rk}&algoritm={algoritm}&tm={tm_list}')
     async with aiohttp.ClientSession() as session:
         async with session.get(add_task_url) as response:
-            text = await response.text()
-            return text
+            text_http = await response.text()
+        async with session.get(add_task_url + '&tip=https') as response:
+            text_https = await response.text()
+        async with session.get(add_task_url + '&tip=ping') as response:
+            text_ping = await response.text()
+        async with session.get(add_task_url + '&tip=http_post') as response:
+            text_http_post = await response.text()
+        async with session.get(add_task_url + '&tip=https_post') as response:
+            text_https_post = await response.text()
+        async with session.get(add_task_url + '&tip=http_get') as response:
+            text_http_get = await response.text()
+        async with session.get(add_task_url + '&tip=https_get') as response:
+            text_https_get = await response.text()
+
+        print(text_http, text_https, text_ping, text_http_post, text_https_post, text_http_get, text_https_get)
+        return text_http, text_https, text_ping, text_http_post, text_https_post, text_http_get, text_https_get
 
 async def get_info(task_id: int) -> str:
     """Функция получения статуса задачи"""
@@ -71,6 +86,13 @@ async def get_info(task_id: int) -> str:
         for tm in tm_list.split(','):
             get_info_url = f'{get_info_base_url}&tm={tm}'
             async with session.get(get_info_url) as response:
+                print(tm)
+                print(f'response={response}')
+                print(f'response.text={await response.text()}')
+                #print(f'response.json={await response.json()}')
+                print(f'response.read={await response.read()}')
+                print(f'response.status={response.status}')
+                print(f'response.headers={response.headers}')
                 tasks_log_dict[tm] = await response.text()
     return tasks_log_dict
 
@@ -102,7 +124,7 @@ async def check_url(url: str) -> str:
 async def process_result(status: dict):
     """Функция обработки и вывода результата проверок по всем IP-адресам"""
     max_length = max(len(name) for name in country_names.values())
-    total_width = max_length + 2  # Учитываем пробел и символ ✅/❌
+    total_width = max_length + 2
 
     message_lines = []
     for country_code, json_str in status.items():
@@ -130,6 +152,8 @@ test = {
     }
 
 async def main():
-    print(await process_result(test))
-
+    #print(await process_result(test))
+    #print(await check_url('http://discord.com'))
+    #await add_task('https://instagram.com/')
+    print(await get_info(10))
 asyncio.run(main())

@@ -10,8 +10,5 @@ pycountry~=24.6.1
 aiolimiter~=1.2.1
 asyncpg~=0.30.0
 pytest~=8.3.4
-black
-isort
-flake8
 requests~=2.32.3
 pandas~=2.2.3
