@@ -8,5 +8,6 @@ commands = [
     BotCommand(command="/filter_by_octet", description="Отфильтровать IP-адреса по первому октету"),
     BotCommand(command="/remove_fourth_octet", description="Обрезать 4-ый октет"),
     BotCommand(command="/remove_port", description="Обрезать порт"),
-    BotCommand(command="/help", description="Справка")
+    BotCommand(command="/help", description="Справка"),
+    BotCommand(command="/ping", description="Ping IP")
 ]

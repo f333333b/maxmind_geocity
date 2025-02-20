@@ -9,6 +9,7 @@ keyboard_main = ReplyKeyboardMarkup(
         KeyboardButton(text="/filter_by_octet")],
         [KeyboardButton(text="/remove_fourth_octet"),
         KeyboardButton(text="/remove_port"),
+        KeyboardButton(text="/ping"),
         KeyboardButton(text="/help")]
     ],
     resize_keyboard=True,

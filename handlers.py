@@ -11,6 +11,7 @@ from keyboards import keyboard_main
 from logging_utils import log_interaction
 from messages import msg
 from states import UserState
+from ping_utils import check_url
 
 router = Router()
 
@@ -44,6 +45,13 @@ async def command_start_handler(message: Message, state: FSMContext):
     """Обработка команды /start"""
     await state.set_state(UserState.START)
     return await message.answer(msg['start'], reply_markup=keyboard_main)
+
+@router.message(Command("ping"))
+@log_interaction
+async def command_ping_handler(message: Message, state: FSMContext):
+    """Обработка команды /ping"""
+    await state.set_state(UserState.AWAITING_PING)
+    return await message.answer('Введите URL для проверки ресурса.')
 
 @router.message(Command("help"))
 @log_interaction
@@ -99,6 +107,14 @@ async def command_remove_port(message: Message, state: FSMContext):
 async def state_start_handler(message: Message):
     """Обработка состояния START"""
     return await message.answer(msg['start'], reply_markup=keyboard_main)
+
+@router.message(UserState.AWAITING_PING)
+@log_interaction
+async def ping_text_handler(message: Message):
+    """Обработка функции /ping - обработка URL"""
+    status_message = await message.answer('Выполняется проверка ресурса, пожалуйста, подождите.')
+    result = await check_url(message.text)
+    return await status_message.edit_text(result)
 
 @router.message(UserState.AWAITING_BASIC_CHECK)
 @log_interaction
