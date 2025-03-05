@@ -1,98 +1,51 @@
 import asyncio
 import aiohttp
-from aiohttp import BasicAuth, ClientError, ClientConnectionError, ClientSSLError, ClientTimeout
-from urllib.parse import urlparse
-import requests
-from requests.auth import HTTPProxyAuth
-import re
 
-async def normalize_url(url: str) -> str:
-    """Функция форматирования URL"""
-    parsed = urlparse(url)
-    if parsed.scheme in ("http", "https"):
-        return url
-    https_url = f"https://{url}"
-    http_url = f"http://{url}"
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (HTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"}
+async def check_status(id):
+    url = f'https://check-host.net/check-result/{id}'
+    headers = {'Accept': 'application/json'}
     async with aiohttp.ClientSession() as session:
-        try:
-            async with session.head(https_url, headers=headers, timeout=aiohttp.ClientTimeout(total=3)) as response:
-                if response.status < 400:
-                    return https_url
-        except Exception:
-            pass
-        try:
-            async with session.head(http_url, headers=headers, timeout=aiohttp.ClientTimeout(total=3)) as response:
-                if response.status < 400:
-                    return http_url
-        except Exception:
-            pass
-    raise ValueError("Невозможно определить работающий URL")
+        async with session.get(url, headers=headers) as response:
+            data = await response.json()
+            return data
 
-async def is_valid_url(url: str) -> bool:
-    """Функция валидации введенного сайта"""
-    pattern = r'^[a-zA-Z0-9-]+\.[a-zA-Z0-9-.]+$'
-    return bool(re.match(pattern, url))
-
-async def check_url(url: str):
-    """Функция проверки ресурса"""
-    if not await is_valid_url(url):
-        return f"{url} - некорректный формат URL"
-    if not url.startswith(("http://", "https://")):
-        url = await normalize_url(url)
-    proxies = {
-        "Латвия": ("http://185.122.206.243:4656", BasicAuth("user149714", "50lkae")),
-        "Россия": (None, None),
-        "Финляндия": ("http://109.196.106.122:2120", BasicAuth("user184781", "h7er2u")),
-    }
-    max_length = max(len(country) + (len(proxy[0]) if proxy[0] else 0) for country, proxy in proxies.items())
-    results_list, results = [], {}
-
+async def ping_proxy(ip: str):
+    """Функция проверки прокси"""
+    ip_numbers = 10
+    headers = {'Accept': 'application/json'}
+    full_url = f'https://check-host.net/check-ping?host={ip}&max_nodes={ip_numbers}'
     async with aiohttp.ClientSession() as session:
-        tasks = []
+        async with session.get(full_url, headers=headers) as response:
+            data = await response.json()
+            request_id = data['request_id']
+            await asyncio.sleep(10)
+            check_status_result = await check_status(request_id)
+            formatted_result = await format_ping_results(check_status_result)
+            #print(formatted_result)
+            return formatted_result
 
-        for country, (proxy_url, proxy_auth) in proxies.items():
-            if proxy_url and proxy_auth:
-                task = asyncio.create_task(
-                    session.get(url, proxy=proxy_url, proxy_auth=proxy_auth, timeout=aiohttp.ClientTimeout(total=5))
-                )
+async def format_ping_results(check_status_result):
+    """Форматирует результаты ping для вывода в Telegram"""
+    result = ["📡 Результаты проверки:", ""]
+    for node, pings in check_status_result.items():
+        print(node, pings)
+        result.append(f"🌍 *{node}*")
+        for i, ping in enumerate(pings[0]):
+            status, latency = ping[0], ping[1]
+            ip = ping[2] if len(ping) > 2 else None
+            emoji = "✅" if status == "OK" else "❌"
+            if ip and i == 0:
+                result.append(f"   ├ {emoji} `{ip}` — *{latency:.2f} ms*")
             else:
-                task = asyncio.create_task(session.get(url, timeout=aiohttp.ClientTimeout(total=5)))
-            tasks.append((country, task))
-            async with session.get("https://api.ipify.org", proxy=proxy_url,
-                                   proxy_auth=proxy_auth if proxy_auth else None) as ip_response:
-                ip = await ip_response.text()
-            try:
-                response = await task
-                if response.status == 200:
-                    results[f"{country} ({ip})"] = "✅ Ресурс доступен"
-                elif response.status in range(400, 500):
-                    results[
-                        f"{country} ({ip})"] = f"⚠️ Ошибка при обращении к ресурсу: {response.status}"
-                elif response.status in range(500, 600):
-                    results[f"{country} ({ip})"] = "❌ Ресурс недоступен (ошибка сервера)"
-                else:
-                    results[f"{country} ({ip})"] = f"Неизвестный статус: {response.status}"
-            except ClientSSLError as ssl_error:
-                results[f"{country} ({ip})"] = f"❌ Ошибка SSL: {str(ssl_error)}"
-            except ClientConnectionError as conn_error:
-                results[f"{country} ({ip})"] = f"❌ Ошибка соединения: {str(conn_error)}"
-            except TimeoutError:
-                results[f"{country} ({ip})"] = "❌ Время ожидания соединения истекло"
-            except ClientError as e:
-                results[f"{country} ({ip})"] = f"❌ Прочая ошибка: {str(e)}"
-            except Exception as e:
-                results[f"{country} ({ip})"] = f"❌ Неизвестная ошибка: {str(e)}"
-    for country, status in results.items():
-        results_list.append(f"{country:<{max_length}}{status}")
-    result_string = "\n".join(results_list)
-    print(result_string)
-    return result_string
+                prefix = "   └" if i == len(pings[0]) - 1 else "   ├"
+                result.append(f"   {prefix} {emoji} *{latency:.2f} ms*")
+        result.append("")
+    #print("\n".join(result))
+    return "\n".join(result)
 
 async def main():
     """Функция проверки конкретного URL для отладки"""
-    await check_url("https://test.com/")
+    await ping_proxy("google.com")
 
 if __name__ == "__main__":
     asyncio.run(main())

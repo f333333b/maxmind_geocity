@@ -51,7 +51,7 @@ async def command_start_handler(message: Message, state: FSMContext):
 async def command_ping_handler(message: Message, state: FSMContext):
     """Обработка команды /ping"""
     await state.set_state(UserState.AWAITING_PING)
-    return await message.answer('Введите URL для проверки ресурса.')
+    return await message.answer(msg['ping_input'])
 
 @router.message(Command("help"))
 @log_interaction
@@ -112,7 +112,7 @@ async def state_start_handler(message: Message):
 @log_interaction
 async def ping_text_handler(message: Message):
     """Обработка функции /ping - обработка URL"""
-    status_message = await message.answer('Выполняется проверка ресурса, пожалуйста, подождите.')
+    status_message = await message.answer(msg['ping_check_in_progress'])
     result = await check_url(message.text)
     return await status_message.edit_text(result)
 
