@@ -11,7 +11,7 @@ from keyboards import keyboard_main
 from logging_utils import log_interaction
 from messages import msg
 from states import UserState
-from ping_utils import check_url
+from ping_utils import ping_proxy
 
 router = Router()
 
@@ -111,9 +111,9 @@ async def state_start_handler(message: Message):
 @router.message(UserState.AWAITING_PING)
 @log_interaction
 async def ping_text_handler(message: Message):
-    """Обработка функции /ping - обработка URL"""
+    """Обработка функции /ping - обработка прокси"""
     status_message = await message.answer(msg['ping_check_in_progress'])
-    result = await check_url(message.text)
+    result = await ping_proxy(message.text)
     return await status_message.edit_text(result)
 
 @router.message(UserState.AWAITING_BASIC_CHECK)

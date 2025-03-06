@@ -39,7 +39,7 @@ async def main():
     await check_db_connection()
 
     # внесение информации в таблицу PostgreSQL capitals
-    #await insert_capitals(capitals)
+    await insert_capitals(capitals)
 
     # запуск базового логирования (вывод в консоль сообщений о событиях в боте)
     logging.basicConfig(level=logging.DEBUG)

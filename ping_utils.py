@@ -28,7 +28,8 @@ async def format_ping_results(check_status_result):
     """Форматирует результаты ping для вывода в Telegram"""
     result = ["📡 Результаты проверки:", ""]
     for node, pings in check_status_result.items():
-        print(node, pings)
+        if not pings or pings[0]:
+            continue
         result.append(f"🌍 *{node}*")
         for i, ping in enumerate(pings[0]):
             status, latency = ping[0], ping[1]

@@ -38,10 +38,23 @@ async def insert_capitals(capitals):
     """Функция внесения информации из словаря в базу данных capitals"""
     try:
         async with db_pool.acquire() as conn:
-            for country, capital in capitals.items():
+            # удаление таблицы
+            await conn.execute(
+                "DROP TABLE IF EXISTS capitals CASCADE;")
+
+            # создание таблицы
+            await conn.execute(
+                "CREATE TABLE capitals ("
+                "country VARCHAR, "
+                "capital VARCHAR, "
+                "ISO VARCHAR);"
+            )
+
+            # наполнение таблицы
+            for country, data in capitals.items():
                 await conn.execute(
-                    "INSERT INTO capitals (country, capital) VALUES ($1, $2)",
-                    country, capital
+                    "INSERT INTO capitals (country, capital, ISO) VALUES ($1, $2, $3)",
+                    country, data[0], data[1]
                 )
             print("Данные успешно внесены в таблицу.")
     except Exception as e:
