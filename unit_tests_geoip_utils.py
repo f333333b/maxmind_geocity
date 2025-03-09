@@ -1,5 +1,10 @@
 import pytest
+import geoip2.models
+import geoip2.database
 from unittest.mock import MagicMock, AsyncMock
+
+import pytest_asyncio
+
 from geoip_utils import add_cities, make_cities_dict, get_ip_info_result, get_ip_info
 
 @pytest.mark.parametrize(
@@ -132,7 +137,7 @@ async def test_make_cities_dict(match, city_response, new_text_dict, target_flag
             iso_code=city_response["iso_code"],
             names={
                 "ru": city_response["country_ru"],
-                "en": "Ukraine"  # добавляем ключ "en" с нужным значением
+                "en": "Ukraine"
             }
         ),
         city=MagicMock(
@@ -201,6 +206,13 @@ async def test_get_ip_info_result(new_text_dict, result, expected_result):
             False,
             [],
             []
+        ),
+        # неверный ISO-код
+        (
+            "RR 123.123.123.123",
+            True,
+            'invalid iso',
+            ''
         ),
         # один IP-адрес (4 октета), target_flag=False
         (
@@ -290,28 +302,28 @@ async def test_get_ip_info_result(new_text_dict, result, expected_result):
 @pytest.mark.asyncio
 async def test_get_ip_info(text_input, target_flag, expected_result, expected_result_copy):
     """Упрощённое тестирование функции get_ip_info с разными входными данными"""
+    #mock_get_capital = AsyncMock(return_value="Веллингтон")
+    #mock_make_cities_dict = AsyncMock()
+    #mock_get_ip_info_result = AsyncMock()
+    #mock_db_pool = MagicMock()
+    #mock_db_pool.acquire.return_value = AsyncMock()
 
-    mock_get_capital = AsyncMock(return_value="Веллингтон")
-
-    # Мокируем работу с geoip2 (функция make_cities_dict)
     mock_make_cities_dict = AsyncMock()
 
-    # Мокируем подключение к базе данных (db_pool)
-    mock_db_pool = MagicMock()
-    mock_db_pool.acquire.return_value = AsyncMock()
+    # Настроим поведение мока, если нужно
+    mock_make_cities_dict.return_value = {
+        "NZ": {"capital": "Веллингтон", "country": "New Zealand"},
 
-    # Тестируем функцию get_ip_info
+    }
+
     result, result_copy = await get_ip_info(
         text_input=text_input,
-        target_flag=target_flag,
-        db_pool=mock_db_pool,  # Переопределяем db_pool
-        get_capital=mock_get_capital,  # Переопределяем get_capital
-        make_cities_dict=mock_make_cities_dict  # Переопределяем make_cities_dict
+        target_flag=target_flag
     )
-
-    # Проверка результата
+    print(result)
     assert result == expected_result
     assert result_copy == expected_result_copy
+
 
     # Проверяем вызовы моков
     #mock_db_pool.acquire.assert_called_once()

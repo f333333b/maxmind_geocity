@@ -24,6 +24,12 @@ async def init_db_pool():
         port='5432'
     )
 
+async def get_db_pool():
+    """Функция для безопасного получения db_pool"""
+    if db_pool is None:
+        raise RuntimeError("Ошибка: db_pool не инициализирован! Вызовите init_db_pool() перед использованием.")
+    return db_pool
+
 async def check_db_connection():
     """Функция проверки соединения с базой данных PostgreSQL"""
     try:

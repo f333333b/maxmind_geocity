@@ -35,11 +35,13 @@ async def main():
     # запуск пула к базе данных capitals
     await init_db_pool()
 
+    await asyncio.sleep(3)
+
     # проверка работы подключения к базе данных capitals
     await check_db_connection()
 
     # внесение информации в таблицу PostgreSQL capitals
-    await insert_capitals(capitals)
+    #await insert_capitals(capitals)
 
     # запуск базового логирования (вывод в консоль сообщений о событиях в боте)
     logging.basicConfig(level=logging.DEBUG)
