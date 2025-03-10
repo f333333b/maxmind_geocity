@@ -236,7 +236,7 @@ capitals = {
     "Uganda": ["Кампала", "UG"],
     "Ukraine": ["Киев", "UA"],
     "United Arab Emirates": ["Абу-Даби", "AE"],
-    "United Kingdom": ["Лондон", "GB"],
+    "United Kingdom": ["Лондон", "UK"],
     "United States": ["Вашингтон", "US"],
     "Unknown": ["Unknown", "??"],
     "Uruguay": ["Монтевидео", "UY"],
