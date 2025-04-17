@@ -9,7 +9,7 @@ import geoip2.errors
 import pycountry
 
 from config import database_filename, pattern, user_data
-from db_capitals_utils import get_capital
+from country_to_capital import country_to_capital
 from keyboards import keyboard_copy
 from messages import msg
 
@@ -111,7 +111,7 @@ async def make_cities_dict(match, city_file, new_text_dict, target_flag, target_
         country_en = response.country.names.get('en', '')
         city = response.city.names.get('ru', '')
         if not city:
-            city = await get_capital(country_en)
+            city = country_to_capital[country_en][0]
         flag = countryflag.getflag([country_id])
         if country_id not in new_text_dict:
             new_text_dict[country_id] = {'head': f'\n{flag} {country_id} ({country_ru})', 'cities': {}}

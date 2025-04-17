@@ -4,7 +4,7 @@ import countryflag
 import re
 
 from config import pattern_ping
-from db_capitals_utils import get_db_pool
+from iso_to_country import iso_to_country
 from messages import msg
 
 async def check_status(id):
@@ -42,24 +42,11 @@ async def ping_proxy(ip: str):
             formatted_result = await format_ping_results(check_status_result)
             return formatted_result
 
-async def get_country_name(db_pool, iso_code):
-    async with db_pool.acquire() as conn:
-        country_result = await conn.fetchrow(
-            """
-            SELECT country FROM capitals
-            WHERE ISO = $1
-            """, iso_code.upper())
-        if country_result:
-            return country_result['country']
-        else:
-            return "Неизвестно"
-
 async def format_ping_results(check_status_result):
     """Форматирует результаты ping для вывода в Telegram"""
-    db_pool = await get_db_pool()
     result = ["📡 Результаты проверки:", ""]
     for node, pings in check_status_result.items():
-        country_name = await get_country_name(db_pool, node[0:2])
+        country_name = iso_to_country[node[0:2]]
         iso_code = node[:2].upper() if len(node) >= 2 else "XX"
         result.append(f"{countryflag.getflag([iso_code])} {country_name}")
         if not pings:

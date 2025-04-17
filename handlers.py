@@ -1,10 +1,11 @@
 from aiogram import F, Router
-from aiogram.filters import Command, StateFilter
+from aiogram.filters import Command, StateFilter, RESTRICTED
 from aiogram.fsm.context import FSMContext
 from aiogram.types import CallbackQuery, ContentType, Message
+from dotenv import load_dotenv
 
 from commands import commands
-from config import TRUSTED_USERS
+from config import TRUSTED_USERS, RESTRICT_ACCESS
 from filter_utils import filter_by_octet, filter_ips_input, filter_ips_list
 from geoip_utils import process_check, process_target_copy
 from keyboards import keyboard_main
@@ -20,11 +21,17 @@ router = Router()
 async def default_state_handler(message: Message, state: FSMContext):
     """Обработка стандартного состояния"""
     user_id = message.from_user.id
-    if user_id in TRUSTED_USERS:
-        await state.set_state(UserState.START)
-        return await message.answer('Здравствуйте! Вы авторизованы. ' + msg['start'], reply_markup=keyboard_main)
-    else:
+
+    # Если включён режим ограничения и юзер не в списке — отказ
+    if RESTRICT_ACCESS and user_id not in TRUSTED_USERS:
         return await message.answer(msg['no_access'])
+
+    # Во всех остальных случаях считаем, что доступ разрешён
+    await state.set_state(UserState.START)
+    return await message.answer(
+        f"Здравствуйте! Вы авторизованы. {msg['start']}",
+        reply_markup=keyboard_main
+    )
 
 @router.message(lambda message: message.content_type != ContentType.TEXT)
 @log_interaction
