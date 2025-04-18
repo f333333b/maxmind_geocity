@@ -9,7 +9,9 @@ BOT_TOKEN = os.getenv('BOT_TOKEN')
 LICENSE_KEY = os.getenv('LICENSE_KEY')
 TRUSTED_USERS = list(map(lambda x: int(x), os.getenv('TRUSTED_USERS').split(',')))
 API_TOKEN = os.getenv('API_TOKEN')
-RESTRICT_ACCESS=os.getenv('RESTRICT_ACCESS') if os.getenv('RESTRICT_ACCESS') else False
+RESTRICT_ACCESS = os.getenv('RESTRICT_ACCESS') if os.getenv('RESTRICT_ACCESS') else False
+ADMIN_ID = os.getenv('ADMIN_ID')
+NOTIFY_ADMIN = False
 bot = Bot(token=BOT_TOKEN)
 database_filename = 'GeoLite2-City.mmdb'
 url = (

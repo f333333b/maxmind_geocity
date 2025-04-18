@@ -4,6 +4,7 @@ import logging
 from functools import wraps
 from aiogram.types import Message, CallbackQuery, ContentType
 from config import user_loggers
+from config import ADMIN_ID, NOTIFY_ADMIN
 
 async def setup_user_logger(user_id):
     """Функция запуска логирования"""
@@ -59,3 +60,30 @@ async def logs_to_db():
             with open(log_path + '/' + filename, 'r') as file:
                 print('test')
         await asyncio.sleep(one_day_in_seconds)
+
+def notify_admin(handler):
+    '''Функция-декоратор для отправки информации о работе бота администратору'''
+    @wraps(handler)
+    async def wrapper(event, *args, **kwargs):
+        result = await handler(event, *args, **kwargs)
+        if not NOTIFY_ADMIN:
+            return result
+        user_id = getattr(getattr(event, "from_user", None), "id", "unknown")
+        payload = getattr(event, "text", None) or getattr(event, "data", None) or "<unknown input>"
+        reply = (
+                getattr(result, "text", None)
+                or (result[0].text if isinstance(result, list) and hasattr(result[0], "text") else None)
+                or "<non-textual reply>"
+        )
+        try:
+            await event.bot.send_message(
+                ADMIN_ID,
+                f"🔔 <b>User</b>: <code>{user_id}</code>\n"
+                f"📨 <b>Input</b>: <code>{payload}</code>\n"
+                f"🤖 <b>Reply</b>: <code>{reply}</code>",
+                parse_mode="HTML"
+            )
+        except Exception:
+            pass
+        return result
+    return wrapper
